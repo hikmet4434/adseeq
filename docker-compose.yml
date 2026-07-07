@@ -1,0 +1,35 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: winninghunter
+      POSTGRES_USER: winninghunter
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-winninghunter_dev_password}
+    volumes:
+      - winninghunter_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U winninghunter -d winninghunter"]
+      interval: 10s
+      timeout: 5s
+      retries: 8
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      DATABASE_URL: postgresql://winninghunter:${POSTGRES_PASSWORD:-winninghunter_dev_password}@db:5432/winninghunter?schema=public
+      AUTH_COOKIE_NAME: wh_session
+      AUTH_SESSION_DAYS: 30
+      ADMIN_EMAILS: admin@winninghunter.local
+    ports:
+      - "${PORT:-3000}:3000"
+    command: sh -c "npx prisma db push && npm run start"
+
+volumes:
+  winninghunter_pg:

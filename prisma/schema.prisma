@@ -1,0 +1,563 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+enum PlanCode {
+  FREE
+  BASIC
+  STANDARD
+  PREMIUM
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  TRIALING
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum UsagePeriod {
+  DAILY
+  MONTHLY
+  LIFETIME
+}
+
+enum AdSource {
+  META
+  ADSPY
+  PINTEREST
+  TIKTOK
+}
+
+enum AdStatus {
+  ACTIVE
+  INACTIVE
+  UNKNOWN
+}
+
+enum MediaType {
+  VIDEO
+  IMAGE
+  CAROUSEL
+  DCT
+  UNKNOWN
+}
+
+enum AdScore {
+  ESTABLISHED
+  HAS_POTENTIAL
+  UNESTABLISHED
+  UNKNOWN
+}
+
+enum StorePlatform {
+  SHOPIFY
+  WOOCOMMERCE
+  CUSTOM
+  UNKNOWN
+}
+
+enum ExportStatus {
+  QUEUED
+  PROCESSING
+  COMPLETED
+  FAILED
+}
+
+enum IngestStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String?
+  name         String?
+  avatarUrl    String?
+  role         UserRole @default(USER)
+  locale       String   @default("tr")
+  currency     String   @default("EUR")
+  theme        String   @default("system")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  lastLoginAt  DateTime?
+
+  sessions      AuthSession[]
+  subscription  Subscription?
+  usageCounters UsageCounter[]
+  savedFolders  SavedFolder[]
+  savedAds      SavedAd[]
+  filterPresets FilterPreset[]
+  trackedStores TrackedStore[]
+  exportJobs    ExportJob[]
+  apiKeys       ApiKey[]
+
+  @@index([email])
+}
+
+model AuthSession {
+  id        String   @id @default(cuid())
+  userId    String
+  tokenHash String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model Plan {
+  id                String   @id @default(cuid())
+  code              PlanCode @unique
+  name              String
+  monthlyPriceEur   Int
+  quarterlyPriceEur Int?
+  yearlyPriceEur    Int?
+  description       String?
+  features          Json
+  isActive          Boolean  @default(true)
+  sortOrder         Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  planId                 String
+  status                 SubscriptionStatus @default(ACTIVE)
+  billingInterval        String             @default("monthly")
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  provider               String?
+  providerCustomerId     String?
+  providerSubscriptionId String?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan Plan @relation(fields: [planId], references: [id])
+
+  @@index([planId])
+  @@index([status])
+}
+
+model UsageCounter {
+  id        String      @id @default(cuid())
+  userId    String
+  metric    String
+  period    UsagePeriod
+  periodKey String
+  used      Int         @default(0)
+  limit     Int?
+  resetAt   DateTime?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, metric, periodKey])
+  @@index([userId, metric])
+  @@index([periodKey])
+}
+
+model BrandPage {
+  id             String   @id @default(cuid())
+  source         AdSource @default(META)
+  externalPageId String?
+  name           String
+  handle         String?
+  logoUrl        String?
+  pageUrl        String?
+  websiteDomain  String?
+  fbLikes        Int?
+  igFollowers    Int?
+  country        String?
+  niche          String?
+  storeId        String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  store Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  ads   Ad[]
+
+  @@unique([source, externalPageId])
+  @@index([websiteDomain])
+  @@index([niche])
+  @@index([country])
+}
+
+model Ad {
+  id                String    @id @default(cuid())
+  source            AdSource  @default(META)
+  externalAdId      String?
+  brandPageId       String?
+  status            AdStatus  @default(UNKNOWN)
+  mediaType         MediaType @default(UNKNOWN)
+  adScore           AdScore   @default(UNKNOWN)
+  primaryText       String?
+  headline          String?
+  description       String?
+  ctaText           String?
+  landingUrl        String?
+  productUrl        String?
+  language          String?
+  countries         String[]  @default([])
+  niche             String?
+  firstSeenAt       DateTime?
+  lastSeenAt        DateTime?
+  createdAtSource   DateTime?
+  daysRunning       Int?
+  estimatedReachMin Int?
+  estimatedReachMax Int?
+  estimatedSpendMin Int?
+  estimatedSpendMax Int?
+  estimatedCpm      Float?
+  rank              Float?
+  rankPercentile    Float?
+  rankGrowth        String?
+  raw               Json?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  brandPage    BrandPage?     @relation(fields: [brandPageId], references: [id], onDelete: SetNull)
+  creatives    AdCreative[]
+  metricsDaily AdMetricDaily[]
+  countryStats AdCountryStat[]
+  aiTags       AITag[]
+  savedBy      SavedAd[]
+
+  @@unique([source, externalAdId])
+  @@index([source, status])
+  @@index([mediaType])
+  @@index([niche])
+  @@index([language])
+  @@index([firstSeenAt])
+  @@index([lastSeenAt])
+  @@index([daysRunning])
+  @@index([rankPercentile])
+}
+
+model AdCreative {
+  id              String    @id @default(cuid())
+  adId            String
+  type            MediaType
+  url             String
+  thumbnailUrl    String?
+  width           Int?
+  height          Int?
+  durationSeconds Int?
+  position        Int       @default(0)
+  createdAt       DateTime  @default(now())
+
+  ad Ad @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@index([adId])
+  @@index([type])
+}
+
+model AdMetricDaily {
+  id              String   @id @default(cuid())
+  adId            String
+  date            DateTime
+  reachMin        Int?
+  reachMax        Int?
+  spendMin        Int?
+  spendMax        Int?
+  cpm             Float?
+  rank            Float?
+  rankPercentile  Float?
+  activeCountries Int?
+  createdAt       DateTime @default(now())
+
+  ad Ad @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@unique([adId, date])
+  @@index([date])
+}
+
+model AdCountryStat {
+  id           String @id @default(cuid())
+  adId         String
+  countryCode  String
+  reachMin     Int?
+  reachMax     Int?
+  spendMin     Int?
+  spendMax     Int?
+  sharePercent Float?
+
+  ad Ad @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@unique([adId, countryCode])
+  @@index([countryCode])
+}
+
+model AITag {
+  id            String   @id @default(cuid())
+  adId          String
+  type          String
+  value         String
+  confidence    Float?
+  explanation   String?
+  model         String?
+  promptVersion String?
+  createdAt     DateTime @default(now())
+
+  ad Ad @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@index([adId])
+  @@index([type, value])
+}
+
+model Store {
+  id                    String        @id @default(cuid())
+  domain                String        @unique
+  name                  String
+  logoUrl               String?
+  platform              StorePlatform @default(UNKNOWN)
+  country               String?
+  currency              String?
+  language              String?
+  niche                 String?
+  categoryPath          String[]      @default([])
+  shopUrl               String?
+  createdAtSource       DateTime?
+  dataSince             DateTime?
+  shopifyTheme          String?
+  productCount          Int?
+  collectionCount       Int?
+  trustpilotScore       Float?
+  trustpilotReviewCount Int?
+  monthlyVisits         Int?
+  monthlyVisitGrowth    Float?
+  estRevenue30dMin      Int?
+  estRevenue30dMax      Int?
+  estRevenue24hMin      Int?
+  estRevenue24hMax      Int?
+  trafficCountries      Json?
+  socials               Json?
+  raw                   Json?
+  createdAt             DateTime      @default(now())
+  updatedAt             DateTime      @updatedAt
+
+  brandPages BrandPage[]
+  products   StoreProduct[]
+  snapshots  StoreSnapshot[]
+  pixels     StorePixel[]
+  apps       StoreApp[]
+  trackedBy  TrackedStore[]
+
+  @@index([niche])
+  @@index([country])
+  @@index([currency])
+  @@index([monthlyVisits])
+  @@index([monthlyVisitGrowth])
+  @@index([estRevenue30dMax])
+}
+
+model StoreSnapshot {
+  id               String   @id @default(cuid())
+  storeId          String
+  date             DateTime
+  monthlyVisits    Int?
+  estRevenueMin    Int?
+  estRevenueMax    Int?
+  activeAdsCount   Int?
+  productCount     Int?
+  trafficCountries Json?
+  createdAt        DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, date])
+  @@index([date])
+}
+
+model StoreProduct {
+  id                String   @id @default(cuid())
+  storeId           String
+  externalProductId String?
+  title             String
+  handle            String?
+  imageUrl          String?
+  productUrl        String?
+  price             Float?
+  compareAtPrice    Float?
+  currency          String?
+  variantCount      Int?
+  isBestSeller      Boolean  @default(false)
+  firstSeenAt       DateTime?
+  raw               Json?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@index([storeId])
+  @@index([isBestSeller])
+  @@index([price])
+}
+
+model StorePixel {
+  id      String @id @default(cuid())
+  storeId String
+  type    String
+  value   String?
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, type, value])
+  @@index([type])
+}
+
+model StoreApp {
+  id         String   @id @default(cuid())
+  storeId    String
+  name       String
+  category   String?
+  detectedAt DateTime @default(now())
+
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([storeId, name])
+  @@index([name])
+}
+
+model SavedFolder {
+  id        String   @id @default(cuid())
+  userId    String
+  name      String
+  color     String?
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  savedAds SavedAd[]
+
+  @@unique([userId, name])
+  @@index([userId])
+}
+
+model SavedAd {
+  id        String   @id @default(cuid())
+  userId    String
+  adId      String
+  folderId  String?
+  note      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ad     Ad           @relation(fields: [adId], references: [id], onDelete: Cascade)
+  folder SavedFolder? @relation(fields: [folderId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, adId])
+  @@index([userId, folderId])
+  @@index([adId])
+}
+
+model TrackedStore {
+  id        String   @id @default(cuid())
+  userId    String
+  storeId   String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId])
+  @@index([userId])
+  @@index([storeId])
+}
+
+model FilterPreset {
+  id        String   @id @default(cuid())
+  userId    String
+  module    String
+  name      String
+  filters   Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, module, name])
+  @@index([userId, module])
+}
+
+model ExportJob {
+  id           String       @id @default(cuid())
+  userId       String
+  module       String
+  filters      Json?
+  status       ExportStatus @default(QUEUED)
+  fileUrl      String?
+  errorMessage String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, status])
+  @@index([module])
+}
+
+model IngestJob {
+  id              String       @id @default(cuid())
+  source          String
+  type            String
+  status          IngestStatus @default(QUEUED)
+  startedAt       DateTime?
+  finishedAt      DateTime?
+  recordsImported Int          @default(0)
+  recordsFailed   Int          @default(0)
+  errorMessage    String?
+  metadata        Json?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([source, status])
+  @@index([createdAt])
+}
+
+model ApiKey {
+  id                   String    @id @default(cuid())
+  userId               String
+  name                 String
+  keyHash              String    @unique
+  prefix               String
+  lastUsedAt           DateTime?
+  revokedAt            DateTime?
+  monthlyCreditLimit   Int?
+  usedCreditsThisMonth Int       @default(0)
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([prefix])
+}
