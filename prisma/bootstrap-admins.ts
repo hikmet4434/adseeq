@@ -1,7 +1,13 @@
 import { PrismaClient, SubscriptionStatus, UserRole } from "@prisma/client";
-import { getConfiguredAdminEmails } from "../src/lib/admin-emails";
 
 const prisma = new PrismaClient();
+
+function getConfiguredAdminEmails() {
+  return (process.env.ADMIN_EMAILS || "")
+    .split(/[\s,;]+/)
+    .map((email) => email.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 async function main() {
   const adminEmails = getConfiguredAdminEmails();
