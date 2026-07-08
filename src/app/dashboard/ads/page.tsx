@@ -15,7 +15,7 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
   const mediaType = resolvedSearchParams.mediaType;
   const where: Prisma.AdWhereInput = {};
   if (q) where.OR = [{ primaryText: { contains: q, mode: "insensitive" } }, { headline: { contains: q, mode: "insensitive" } }, { brandPage: { name: { contains: q, mode: "insensitive" } } }];
-  if (niche) where.niche = niche;
+  if (niche) where.niche = { contains: niche, mode: "insensitive" };
   if (mediaType) where.mediaType = mediaType as any;
   const ads = await prisma.ad.findMany({ where, include: { brandPage: true, creatives: { take: 1 }, savedBy: { where: { userId: user.id } } }, orderBy: { rankPercentile: "asc" }, take: 48 });
   const isAdmin = user.role === "ADMIN";

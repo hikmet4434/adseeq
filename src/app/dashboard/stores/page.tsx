@@ -10,8 +10,8 @@ export default async function StoresPage({ searchParams }: { searchParams: Promi
   const q = resolvedSearchParams.q?.trim();
   const niche = resolvedSearchParams.niche;
   const where: Prisma.StoreWhereInput = {};
-  if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { domain: { contains: q, mode: "insensitive" } }];
-  if (niche) where.niche = niche;
+  if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { domain: { contains: q, mode: "insensitive" } }, { niche: { contains: q, mode: "insensitive" } }];
+  if (niche) where.niche = { contains: niche, mode: "insensitive" };
   const stores = await prisma.store.findMany({ where, include: { products: { where: { isBestSeller: true }, take: 2 }, brandPages: { include: { _count: { select: { ads: true } } }, take: 1 } }, orderBy: { estRevenue30dMax: "desc" }, take: 50 });
   return (
     <div>
