@@ -5,3 +5,8 @@ node_modules
 .DS_Store
 next-env.d.ts
 /prisma/dev.db
+
+MEMORY.md
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
