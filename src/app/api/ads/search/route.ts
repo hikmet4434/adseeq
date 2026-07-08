@@ -79,7 +79,8 @@ export async function GET(req: Request) {
         thumbnailUrl: ad.creatives[0]?.thumbnailUrl || ad.creatives[0]?.url,
         isSaved: savedIds.has(ad.id)
       },
-      plan?.code
+      plan?.code,
+      user.role === "ADMIN"
     )
   );
 

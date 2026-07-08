@@ -14,5 +14,6 @@ export async function GET(_: Request, context: { params: Promise<{ id: string }>
   });
   if (!ad) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   const plan = planFromUser(user as any);
-  return NextResponse.json({ data: maskAdForPlan(ad as any, plan?.code) });
+  const isAdmin = user.role === "ADMIN";
+  return NextResponse.json({ data: maskAdForPlan(ad as any, plan?.code, isAdmin) });
 }

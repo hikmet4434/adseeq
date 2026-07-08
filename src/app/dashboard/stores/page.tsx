@@ -4,10 +4,11 @@ import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/current-user";
 import { Card } from "@/components/ui/card";
 
-export default async function StoresPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function StoresPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   await requireUser();
-  const q = searchParams.q?.trim();
-  const niche = searchParams.niche;
+  const resolvedSearchParams = await searchParams;
+  const q = resolvedSearchParams.q?.trim();
+  const niche = resolvedSearchParams.niche;
   const where: Prisma.StoreWhereInput = {};
   if (q) where.OR = [{ name: { contains: q, mode: "insensitive" } }, { domain: { contains: q, mode: "insensitive" } }];
   if (niche) where.niche = niche;

@@ -6,18 +6,20 @@ import { maskAdForPlan } from "@/lib/locked-response";
 import { planFromUser } from "@/lib/plans";
 import { Card } from "@/components/ui/card";
 
-export default async function AdsPage({ searchParams }: { searchParams: Record<string, string | undefined> }) {
+export default async function AdsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
   const plan = planFromUser(user as any);
-  const q = searchParams.q?.trim();
-  const niche = searchParams.niche;
-  const mediaType = searchParams.mediaType;
+  const resolvedSearchParams = await searchParams;
+  const q = resolvedSearchParams.q?.trim();
+  const niche = resolvedSearchParams.niche;
+  const mediaType = resolvedSearchParams.mediaType;
   const where: Prisma.AdWhereInput = {};
   if (q) where.OR = [{ primaryText: { contains: q, mode: "insensitive" } }, { headline: { contains: q, mode: "insensitive" } }, { brandPage: { name: { contains: q, mode: "insensitive" } } }];
   if (niche) where.niche = niche;
   if (mediaType) where.mediaType = mediaType as any;
   const ads = await prisma.ad.findMany({ where, include: { brandPage: true, creatives: { take: 1 }, savedBy: { where: { userId: user.id } } }, orderBy: { rankPercentile: "asc" }, take: 48 });
-  const masked = ads.map((ad) => maskAdForPlan({ ...ad, isSaved: ad.savedBy.length > 0 }, plan?.code));
+  const isAdmin = user.role === "ADMIN";
+  const masked = ads.map((ad) => maskAdForPlan({ ...ad, isSaved: ad.savedBy.length > 0 }, plan?.code, isAdmin));
 
   return (
     <div>
