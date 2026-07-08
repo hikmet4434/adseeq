@@ -6,7 +6,7 @@
     "dev": "next dev",
     "build": "prisma generate && next build",
     "start": "next start",
-    "start:deploy": "prisma db push && tsx prisma/seed-if-empty.ts && next start",
+    "start:deploy": "prisma db push && tsx prisma/seed-if-empty.ts && tsx prisma/bootstrap-admins.ts && next start",
     "lint": "next lint",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
