@@ -5,6 +5,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
 import { isConfiguredAdminEmail } from "@/lib/admin-emails";
+import { hizSiniriAsimi } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
@@ -13,6 +14,10 @@ const schema = z.object({
 });
 
 export async function POST(req: Request) {
+  // Sahte hesap seli = ücretsiz plan kotası tüketimi (doğrudan maliyet).
+  const sinir = hizSiniriAsimi(req, "kayit");
+  if (sinir) return sinir;
+
   const body = schema.parse(await req.json());
   const email = body.email.trim().toLowerCase();
   const isAdmin = isConfiguredAdminEmail(email);
