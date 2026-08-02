@@ -67,6 +67,7 @@ export async function GET(req: Request) {
         avatarUrl: profile.picture || null,
         locale: profile.locale || "tr",
         role: isAdmin ? UserRole.ADMIN : UserRole.USER,
+        lastLoginAt: new Date(),
         subscription: { create: { planId: plan.id, status: "ACTIVE" } }
       }
     });
@@ -77,9 +78,19 @@ export async function GET(req: Request) {
         googleId: user.googleId || profile.sub,
         name: user.name || profile.name || null,
         avatarUrl: user.avatarUrl || profile.picture || null,
+        role: isAdmin ? UserRole.ADMIN : user.role,
         lastLoginAt: new Date()
       }
     });
+
+    if (isAdmin) {
+      if (!plan) return redirectToLogin("PLAN_NOT_SEEDED");
+      await prisma.subscription.upsert({
+        where: { userId: user.id },
+        update: { planId: plan.id, status: "ACTIVE", cancelAtPeriodEnd: false },
+        create: { userId: user.id, planId: plan.id, status: "ACTIVE" }
+      });
+    }
   }
 
   await createSession(user.id);

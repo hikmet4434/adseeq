@@ -6,6 +6,7 @@ const nav = [
   ["Stores", "/dashboard/stores"],
   ["Store Tracker", "/dashboard/store-tracker"],
   ["Saved Ads", "/dashboard/saved-ads"],
+  ["Account", "/dashboard/account"],
   ["TikTok Shop", "#"],
   ["Magic AI", "#"],
   ["Trends", "#"],
@@ -25,9 +26,10 @@ export default async function DashboardLayout({ children }: { children: React.Re
                 {label}
               </Link>
             ))}
+            {user.role === "ADMIN" && <Link href="/dashboard/admin" className="rounded-xl bg-violet-50 px-3 py-2 text-sm font-black text-violet-700 hover:bg-violet-100">Admin</Link>}
           </nav>
           <div className="flex items-center gap-3">
-            <Link href="/pricing" className="rounded-xl bg-violet-700 px-4 py-2 text-sm font-bold text-white">Upgrade</Link>
+            {user.role === "ADMIN" ? <Link href="/dashboard/admin" className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white lg:hidden">Admin</Link> : <Link href="/pricing" className="rounded-xl bg-violet-700 px-4 py-2 text-sm font-bold text-white">Upgrade</Link>}
             <div className="text-right text-sm">
               <div className="font-bold">{user.name || user.email}</div>
               <div className="text-xs text-slate-500">{user.subscription?.plan.name}</div>

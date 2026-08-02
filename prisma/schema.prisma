@@ -33,6 +33,23 @@ enum UsagePeriod {
   LIFETIME
 }
 
+enum CreditTransactionType {
+  ADMIN_CREDIT
+  ADMIN_DEBIT
+  PAYMENT
+  REFUND
+  USAGE
+  ADJUSTMENT
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+  CANCELED
+}
+
 enum AdSource {
   META
   ADSPY
@@ -83,29 +100,35 @@ enum IngestStatus {
 }
 
 model User {
-  id           String   @id @default(cuid())
-  email        String   @unique
-  passwordHash String?
-  googleId     String?  @unique
-  name         String?
-  avatarUrl    String?
-  role         UserRole @default(USER)
-  locale       String   @default("tr")
-  currency     String   @default("EUR")
-  theme        String   @default("system")
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-  lastLoginAt  DateTime?
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?
+  googleId      String?   @unique
+  name          String?
+  avatarUrl     String?
+  role          UserRole  @default(USER)
+  locale        String    @default("tr")
+  currency      String    @default("EUR")
+  theme         String    @default("system")
+  creditBalance Int       @default(0)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  lastLoginAt   DateTime?
 
-  sessions      AuthSession[]
-  subscription  Subscription?
-  usageCounters UsageCounter[]
-  savedFolders  SavedFolder[]
-  savedAds      SavedAd[]
-  filterPresets FilterPreset[]
-  trackedStores TrackedStore[]
-  exportJobs    ExportJob[]
-  apiKeys       ApiKey[]
+  sessions           AuthSession[]
+  subscription       Subscription?
+  usageCounters      UsageCounter[]
+  savedFolders       SavedFolder[]
+  savedAds           SavedAd[]
+  filterPresets      FilterPreset[]
+  trackedStores      TrackedStore[]
+  exportJobs         ExportJob[]
+  apiKeys            ApiKey[]
+  creditTransactions CreditTransaction[] @relation("CreditOwner")
+  creditActions      CreditTransaction[] @relation("CreditActor")
+  payments           Payment[]           @relation("PaymentOwner")
+  manualPayments     Payment[]           @relation("PaymentActor")
+  adminAuditLogs     AdminAuditLog[]     @relation("AuditActor")
 
   @@index([email])
 }
@@ -241,7 +264,7 @@ model Ad {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  brandPage    BrandPage?     @relation(fields: [brandPageId], references: [id], onDelete: SetNull)
+  brandPage    BrandPage?      @relation(fields: [brandPageId], references: [id], onDelete: SetNull)
   creatives    AdCreative[]
   metricsDaily AdMetricDaily[]
   countryStats AdCountryStat[]
@@ -395,7 +418,7 @@ model StoreSnapshot {
 }
 
 model StoreProduct {
-  id                String   @id @default(cuid())
+  id                String    @id @default(cuid())
   storeId           String
   externalProductId String?
   title             String
@@ -406,11 +429,11 @@ model StoreProduct {
   compareAtPrice    Float?
   currency          String?
   variantCount      Int?
-  isBestSeller      Boolean  @default(false)
+  isBestSeller      Boolean   @default(false)
   firstSeenAt       DateTime?
   raw               Json?
-  createdAt         DateTime @default(now())
-  updatedAt         DateTime @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
   store Store @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
@@ -420,7 +443,7 @@ model StoreProduct {
 }
 
 model StorePixel {
-  id      String @id @default(cuid())
+  id      String  @id @default(cuid())
   storeId String
   type    String
   value   String?
@@ -561,4 +584,67 @@ model ApiKey {
 
   @@index([userId])
   @@index([prefix])
+}
+
+model CreditTransaction {
+  id           String                @id @default(cuid())
+  userId       String
+  actorId      String?
+  type         CreditTransactionType
+  amount       Int
+  balanceAfter Int
+  reason       String
+  metadata     Json?
+  createdAt    DateTime              @default(now())
+
+  user  User  @relation("CreditOwner", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("CreditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([actorId, createdAt])
+  @@index([type, createdAt])
+}
+
+model Payment {
+  id            String        @id @default(cuid())
+  userId        String
+  actorId       String?
+  amountCents   Int
+  currency      String        @default("EUR")
+  status        PaymentStatus @default(PAID)
+  provider      String        @default("MANUAL")
+  externalId    String?       @unique
+  description   String?
+  creditGranted Int           @default(0)
+  paidAt        DateTime?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user  User  @relation("PaymentOwner", fields: [userId], references: [id], onDelete: Cascade)
+  actor User? @relation("PaymentActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([status, createdAt])
+  @@index([provider, createdAt])
+}
+
+model AdminAuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorEmail String
+  action     String
+  targetType String
+  targetId   String?
+  summary    String
+  details    Json?
+  ipAddress  String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  actor User? @relation("AuditActor", fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([action, createdAt])
+  @@index([targetType, targetId])
+  @@index([createdAt])
 }

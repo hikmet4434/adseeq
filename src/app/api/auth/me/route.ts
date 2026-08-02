@@ -10,7 +10,8 @@ export async function GET() {
       email: user.email,
       name: user.name,
       role: user.role,
-      plan: user.subscription?.plan.code
+      plan: user.subscription?.plan.code,
+      creditBalance: user.creditBalance
     }
   });
 }
