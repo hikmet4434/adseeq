@@ -27,6 +27,8 @@ services:
       AUTH_COOKIE_NAME: wh_session
       AUTH_SESSION_DAYS: 30
       ADMIN_EMAILS: admin@winninghunter.local
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
     ports:
       - "${PORT:-3000}:3000"
     command: sh -c "npx prisma db push && npm run start"
