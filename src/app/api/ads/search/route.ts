@@ -5,8 +5,14 @@ import { currentUser } from "@/lib/auth/current-user";
 import { checkAndConsumeQuota } from "@/lib/quota";
 import { maskAdForPlan } from "@/lib/locked-response";
 import { planFromUser } from "@/lib/plans";
+import { hizSiniriAsimi } from "@/lib/rate-limit";
 
 export async function GET(req: Request) {
+  // Kota kontrolü zaten var; bu limit kota tüketmeyen planlarda da
+  // veritabanını ağır sorgu seliyle boğmayı engeller.
+  const sinir = hizSiniriAsimi(req, "arama");
+  if (sinir) return sinir;
+
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
 
