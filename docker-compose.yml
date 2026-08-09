@@ -24,16 +24,37 @@ services:
       NODE_ENV: production
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       DATABASE_URL: postgresql://winninghunter:${POSTGRES_PASSWORD:-winninghunter_dev_password}@db:5432/winninghunter?schema=public
-      AUTH_COOKIE_NAME: wh_session
-      AUTH_SESSION_DAYS: 30
-      ADMIN_EMAILS: admin@winninghunter.local
+      AUTH_COOKIE_NAME: ${AUTH_COOKIE_NAME:-wh_session}
+      AUTH_SESSION_DAYS: ${AUTH_SESSION_DAYS:-30}
+      ADMIN_EMAILS: ${ADMIN_EMAILS:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       APIFY_TOKEN: ${APIFY_TOKEN:-}
+      APIFY_TIKTOK_ACTOR_ID: ${APIFY_TIKTOK_ACTOR_ID:-toolzerhub~tiktok-shop-products-scraper}
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_MODEL: ${OPENAI_MODEL:-gpt-5.6-luna}
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_BASIC_MONTHLY: ${STRIPE_PRICE_BASIC_MONTHLY:-}
+      STRIPE_PRICE_BASIC_YEARLY: ${STRIPE_PRICE_BASIC_YEARLY:-}
+      STRIPE_PRICE_STANDARD_MONTHLY: ${STRIPE_PRICE_STANDARD_MONTHLY:-}
+      STRIPE_PRICE_STANDARD_YEARLY: ${STRIPE_PRICE_STANDARD_YEARLY:-}
+      STRIPE_PRICE_PREMIUM_MONTHLY: ${STRIPE_PRICE_PREMIUM_MONTHLY:-}
+      STRIPE_PRICE_PREMIUM_YEARLY: ${STRIPE_PRICE_PREMIUM_YEARLY:-}
+      CRON_SECRET: ${CRON_SECRET:-}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      ALERT_FROM_EMAIL: ${ALERT_FROM_EMAIL:-}
+      ENABLE_DEMO_ACCOUNTS: ${ENABLE_DEMO_ACCOUNTS:-false}
       APIFY_ACTOR_ID: ${APIFY_ACTOR_ID:-aiscraperdev~facebook-meta-ads-library-scraper}
     ports:
       - "${PORT:-3000}:3000"
-    command: sh -c "npx prisma db push && npm run start"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/health >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 45s
+    command: npm run start:deploy
 
 volumes:
   winninghunter_pg:

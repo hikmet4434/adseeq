@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const RESULT_LIMIT = 10;
 const RESULT_OPTIONS = [10, 25, 50, 100];
 
-export function ApifyEmptySearch({ query }: { query: string }) {
+export function ApifyEmptySearch({ query, planLimit }: { query: string; planLimit: number }) {
   const router = useRouter();
   const [maxResults, setMaxResults] = useState(RESULT_LIMIT);
   const [busy, setBusy] = useState(false);
@@ -17,18 +17,12 @@ export function ApifyEmptySearch({ query }: { query: string }) {
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/ingest/apify", {
+      const response = await fetch("/api/ads/import-apify", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          searchTerms: [query],
-          country: "ALL",
-          adActiveStatus: "ACTIVE",
-          mediaType: "ALL",
+          searchTerm: query,
           maxResults,
-          maxCostUsd: Math.max(0.1, Math.ceil(maxResults * 0.004 * 10) / 10),
-          scrapeAdDetails: true,
-          includeAboutPage: false
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -60,18 +54,18 @@ export function ApifyEmptySearch({ query }: { query: string }) {
           onChange={(event) => setMaxResults(Number(event.target.value))}
           className="min-w-0 flex-1 rounded-2xl border border-violet-200 bg-white px-4 py-3 font-bold"
         >
-          {RESULT_OPTIONS.map((count) => <option key={count} value={count}>{count} reklam</option>)}
+          {RESULT_OPTIONS.filter((count) => count <= planLimit).map((count) => <option key={count} value={count}>{count} reklam</option>)}
         </select>
         <button
           type="button"
-          disabled={busy}
+          disabled={busy || planLimit === 0}
           onClick={importFromApify}
           className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white disabled:cursor-wait disabled:opacity-50"
         >
-          {busy ? "Getiriliyor…" : "Getir"}
+          {busy ? "Getiriliyor…" : planLimit === 0 ? "Planı yükselt" : "Getir"}
         </button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Apify · Yalnızca yöneticiler</p>
+      <p className="mt-2 text-xs text-slate-500">Apify · Plan limiti: {planLimit || "erişim yok"} reklam · Kullanılan kayıt kadar API kredisi</p>
       {message && <p className={`mt-3 text-sm font-semibold ${error ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
     </div>
   );

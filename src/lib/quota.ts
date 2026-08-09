@@ -102,10 +102,24 @@ export async function checkAndConsumeQuota(params: {
     };
   }
 
-  const updated = await prisma.usageCounter.update({
-    where: { id: counter.id },
+  // Koşullu artış, eşzamanlı iki isteğin aynı kalan kotayı tüketmesini önler.
+  const claimed = await prisma.usageCounter.updateMany({
+    where: { id: counter.id, used: { lte: limit - amount } },
     data: { used: { increment: amount }, limit, resetAt }
   });
+
+  if (claimed.count === 0) {
+    const latest = await prisma.usageCounter.findUniqueOrThrow({ where: { id: counter.id } });
+    return {
+      allowed: false,
+      used: latest.used,
+      limit,
+      remaining: Math.max(0, limit - latest.used),
+      resetAt: latest.resetAt
+    };
+  }
+
+  const updated = await prisma.usageCounter.findUniqueOrThrow({ where: { id: counter.id } });
 
   return {
     allowed: true,
@@ -114,4 +128,19 @@ export async function checkAndConsumeQuota(params: {
     remaining: Math.max(0, limit - updated.used),
     resetAt: updated.resetAt
   };
+}
+
+export async function refundQuota(params: { userId: string; metric: string; amount?: number }) {
+  const amount = Math.max(0, params.amount ?? 1);
+  if (amount === 0) return;
+  const period = periodForMetric(params.metric);
+  const periodKey = keyForPeriod(period);
+  const counter = await prisma.usageCounter.findUnique({
+    where: { userId_metric_periodKey: { userId: params.userId, metric: params.metric, periodKey } }
+  });
+  if (!counter) return;
+  await prisma.usageCounter.update({
+    where: { id: counter.id },
+    data: { used: Math.max(0, counter.used - amount) }
+  });
 }

@@ -7,12 +7,15 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "start:deploy": "prisma db push && tsx prisma/seed-if-empty.ts && tsx prisma/bootstrap-admins.ts && next start",
-    "lint": "next lint",
+    "lint": "tsc --noEmit",
+    "test": "tsx --test tests/core.test.ts",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:seed": "tsx prisma/seed.ts",
-    "db:studio": "prisma studio"
+    "db:studio": "prisma studio",
+    "backup": "sh scripts/backup-postgres.sh",
+    "health:check": "sh scripts/monitor-health.sh"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
@@ -20,9 +23,10 @@
   "dependencies": {
     "@prisma/client": "5.22.0",
     "bcryptjs": "2.4.3",
-    "next": "^16.3.0-canary.79",
+    "next": "^16.3.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "stripe": "^22.4.0",
     "zod": "3.23.8"
   },
   "devDependencies": {
@@ -31,7 +35,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "autoprefixer": "10.4.20",
-    "postcss": "8.4.47",
+    "postcss": "^8.5.26",
     "prisma": "5.22.0",
     "tailwindcss": "3.4.13",
     "tsx": "4.23.4",

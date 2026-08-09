@@ -130,6 +130,9 @@ model User {
   payments           Payment[]           @relation("PaymentOwner")
   manualPayments     Payment[]           @relation("PaymentActor")
   adminAuditLogs     AdminAuditLog[]     @relation("AuditActor")
+  aiAnalyses         AiAnalysis[]
+  brandAlerts        BrandAlert[]
+  notifications      Notification[]
 
   @@index([email])
 }
@@ -223,8 +226,8 @@ model BrandPage {
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  store Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
-  ads   Ad[]
+  store     Store?         @relation(fields: [storeId], references: [id], onDelete: SetNull)
+  ads       Ad[]
   trackedBy TrackedBrand[]
 
   @@unique([source, externalPageId])
@@ -527,12 +530,98 @@ model TrackedBrand {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  brandPage BrandPage @relation(fields: [brandPageId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandPage BrandPage    @relation(fields: [brandPageId], references: [id], onDelete: Cascade)
+  alerts    BrandAlert[]
 
   @@unique([userId, brandPageId])
   @@index([userId])
   @@index([brandPageId])
+}
+
+model TikTokProduct {
+  id             String   @id @default(cuid())
+  externalId     String   @unique
+  title          String
+  description    String?
+  productUrl     String?
+  imageUrl       String?
+  shopName       String?
+  shopExternalId String?
+  region         String?
+  currency       String?
+  price          Float?
+  originalPrice  Float?
+  soldCount      Int?
+  rating         Float?
+  reviewCount    Int?
+  category       String?
+  raw            Json?
+  firstSeenAt    DateTime @default(now())
+  lastSeenAt     DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([region])
+  @@index([soldCount])
+  @@index([lastSeenAt])
+}
+
+model AiAnalysis {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String?
+  provider  String
+  model     String
+  summary   String
+  insights  Json
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model TrendSnapshot {
+  id        String   @id @default(cuid())
+  date      DateTime @unique
+  metrics   Json
+  createdAt DateTime @default(now())
+
+  @@index([date])
+}
+
+model BrandAlert {
+  id             String    @id @default(cuid())
+  userId         String
+  trackedBrandId String
+  adId           String
+  type           String    @default("NEW_AD")
+  title          String
+  details        Json?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trackedBrand TrackedBrand @relation(fields: [trackedBrandId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, trackedBrandId, adId, type])
+  @@index([userId, readAt, createdAt])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt, createdAt])
 }
 
 model FilterPreset {

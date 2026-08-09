@@ -24,15 +24,8 @@ npm run db:seed
 npm run dev
 ```
 
-Demo hesaplar:
-
-```txt
-Demo:
-demo@winninghunter.local / demo1234
-
-Admin:
-admin@winninghunter.local / admin1234
-```
+Üretimde hazır demo hesabı oluşturulmaz. Yalnızca yerel geliştirmede bilinçli olarak
+`ENABLE_DEMO_ACCOUNTS=true` ayarlanırsa seed hesapları korunur.
 
 ## Production build
 
@@ -53,8 +46,15 @@ curl http://localhost:3001/login
 ```bash
 cp .env.production.example .env
 docker compose up -d --build
-docker compose exec app npm run db:seed
 ```
+
+## Production operations
+
+- Health endpoint: `GET /api/health`
+- Daily intelligence: `POST /api/cron/daily-intelligence` with `Authorization: Bearer $CRON_SECRET`
+- PostgreSQL backup: `npm run backup` (default retention: 14 days)
+- External monitor check: `npm run health:check`; optional `ALERT_WEBHOOK_URL` receives failures
+- Stripe webhook: `POST /api/billing/webhook`
 
 ## Coolify deploy
 
@@ -69,15 +69,10 @@ NEXT_PUBLIC_APP_URL=https://winninghunter.your-domain.com
 DATABASE_URL=postgresql://...
 AUTH_COOKIE_NAME=wh_session
 AUTH_SESSION_DAYS=30
-ADMIN_EMAILS=admin@winninghunter.local
+ADMIN_EMAILS=owner@example.com
 ```
 
-6. İlk deploy sonrası terminal:
-
-```bash
-npx prisma db push
-npm run db:seed
-```
+6. Uygulama başlangıcında şema, plan seed'i ve `ADMIN_EMAILS` yetkileri otomatik uygulanır.
 
 ## Vercel deploy
 

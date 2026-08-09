@@ -23,7 +23,7 @@ export default function LandingPage() {
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <LinkButton href="/register" className="px-6 py-3">Ücretsiz başla</LinkButton>
-            <LinkButton href="/dashboard/ads" className="bg-slate-950 px-6 py-3 hover:bg-slate-800">Demo panel</LinkButton>
+            <LinkButton href="/dashboard/ads" className="bg-slate-950 px-6 py-3 hover:bg-slate-800">Panele git</LinkButton>
           </div>
         </div>
         <div className="glass rounded-[2rem] p-4 shadow-2xl">

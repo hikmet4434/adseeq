@@ -15,7 +15,7 @@ export default async function BrandTrackerPage({ searchParams }: { searchParams:
       { niche: { contains: query, mode: "insensitive" } }
     ]
   } : {};
-  const [brands, tracked] = await Promise.all([
+  const [brands, tracked, alerts] = await Promise.all([
     prisma.brandPage.findMany({
       where,
       include: {
@@ -25,7 +25,8 @@ export default async function BrandTrackerPage({ searchParams }: { searchParams:
       orderBy: { ads: { _count: "desc" } },
       take: 40
     }),
-    prisma.trackedBrand.findMany({ where: { userId: user.id } })
+    prisma.trackedBrand.findMany({ where: { userId: user.id } }),
+    prisma.brandAlert.findMany({ where: { userId: user.id }, include: { trackedBrand: { include: { brandPage: true } } }, orderBy: { createdAt: "desc" }, take: 20 })
   ]);
   const trackedByBrand = new Map(tracked.map((item) => [item.brandPageId, item.id]));
   const limit = getFeatureLimit(planFromUser(user as any), "followed_brands");
@@ -40,6 +41,7 @@ export default async function BrandTrackerPage({ searchParams }: { searchParams:
         <input name="q" defaultValue={query} placeholder="Marka, domain veya niche ara" className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-4 py-3" />
         <button className="rounded-2xl bg-slate-950 px-5 py-3 font-bold text-white">Ara</button>
       </form>
+      {alerts.length > 0 && <Card className="mb-5"><h2 className="text-lg font-black">Yeni reklam uyarıları</h2><div className="mt-3 space-y-2">{alerts.map((alert) => <div key={alert.id} className="flex items-center justify-between gap-3 rounded-2xl bg-violet-50 p-3 text-sm"><div><b>{alert.trackedBrand.brandPage.name}</b><p className="text-slate-600">{alert.title}</p></div><span className="shrink-0 text-xs text-slate-400">{alert.createdAt.toLocaleDateString("tr-TR")}</span></div>)}</div></Card>}
       <div className="grid gap-4 lg:grid-cols-2">
         {brands.map((brand) => {
           const activeAds = brand.ads.filter((ad) => ad.status === "ACTIVE").length;

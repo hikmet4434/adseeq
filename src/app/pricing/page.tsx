@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/db";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { CheckoutButton } from "@/components/checkout-button";
 
 export default async function PricingPage() {
   const plans = await prisma.plan.findMany({ orderBy: { sortOrder: "asc" } }).catch(() => []);
@@ -29,7 +30,7 @@ export default async function PricingPage() {
                 <li>Store tracker: {String((plan.features as any).trackedStores ?? "Sınırsız")}</li>
                 <li>Saved ads: {String((plan.features as any).savedAds ?? "Sınırsız")}</li>
               </ul>
-              <LinkButton href="/register" className="mt-6 w-full">Başla</LinkButton>
+              {plan.code === "FREE" ? <LinkButton href="/register" className="mt-6 w-full">Ücretsiz başla</LinkButton> : <CheckoutButton planCode={plan.code} />}
             </Card>
           ))}
         </div>

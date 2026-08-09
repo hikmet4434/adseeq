@@ -9,7 +9,7 @@ import { hizSiniriAsimi } from "@/lib/rate-limit";
 
 const schema = z.object({
   email: z.string().email(),
-  password: z.string().min(6),
+  password: z.string().min(10).max(72),
   name: z.string().optional()
 });
 
@@ -18,7 +18,9 @@ export async function POST(req: Request) {
   const sinir = hizSiniriAsimi(req, "kayit");
   if (sinir) return sinir;
 
-  const body = schema.parse(await req.json());
+  const parsed = schema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
+  const body = parsed.data;
   const email = body.email.trim().toLowerCase();
   const isAdmin = isConfiguredAdminEmail(email);
   const plan = await prisma.plan.findUnique({ where: { code: isAdmin ? "PREMIUM" : "FREE" } });

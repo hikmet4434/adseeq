@@ -5,10 +5,12 @@ import { prisma } from "@/lib/db";
 import { createSession } from "@/lib/auth/session";
 import { hizSiniriAsimi } from "@/lib/rate-limit";
 
-const schema = z.object({ email: z.string().email(), password: z.string().min(1) });
+const schema = z.object({ email: z.string().email(), password: z.string().min(1).max(72) });
 
 export async function POST(req: Request) {
-  const body = schema.parse(await req.json());
+  const parsed = schema.safeParse(await req.json().catch(() => null));
+  if (!parsed.success) return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
+  const body = parsed.data;
   // Sayaç e-posta bazlı da tutulur: tek IP'den farklı hesaplara saldırı da yavaşlar.
   const sinir = hizSiniriAsimi(req, "giris", body.email.trim().toLowerCase());
   if (sinir) return sinir;

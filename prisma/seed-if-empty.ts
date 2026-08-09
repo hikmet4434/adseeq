@@ -30,6 +30,10 @@ async function main() {
 
   console.log("🌱 Empty database detected. Running demo seed...");
   await runSeed();
+  if (process.env.ENABLE_DEMO_ACCOUNTS !== "true") {
+    await prisma.user.deleteMany({ where: { email: { in: ["demo@winninghunter.local", "admin@winninghunter.local"] } } });
+    console.log("🔒 Public demo accounts removed.");
+  }
 }
 
 main()

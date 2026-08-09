@@ -57,7 +57,7 @@ export default function RegisterPage() {
         <label className="mt-4 block text-sm font-bold">Şifre</label>
         <input 
           type="password" 
-          placeholder="En az 6 karakterli şifreniz"
+          placeholder="En az 10 karakterli şifreniz"
           className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-600" 
           value={password} 
           onChange={(e) => setPassword(e.target.value)} 
