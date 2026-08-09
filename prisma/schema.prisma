@@ -122,6 +122,7 @@ model User {
   savedAds           SavedAd[]
   filterPresets      FilterPreset[]
   trackedStores      TrackedStore[]
+  trackedBrands      TrackedBrand[]
   exportJobs         ExportJob[]
   apiKeys            ApiKey[]
   creditTransactions CreditTransaction[] @relation("CreditOwner")
@@ -224,6 +225,7 @@ model BrandPage {
 
   store Store? @relation(fields: [storeId], references: [id], onDelete: SetNull)
   ads   Ad[]
+  trackedBy TrackedBrand[]
 
   @@unique([source, externalPageId])
   @@index([websiteDomain])
@@ -515,6 +517,22 @@ model TrackedStore {
   @@unique([userId, storeId])
   @@index([userId])
   @@index([storeId])
+}
+
+model TrackedBrand {
+  id          String   @id @default(cuid())
+  userId      String
+  brandPageId String
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  brandPage BrandPage @relation(fields: [brandPageId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, brandPageId])
+  @@index([userId])
+  @@index([brandPageId])
 }
 
 model FilterPreset {

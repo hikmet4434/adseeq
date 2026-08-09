@@ -7,10 +7,10 @@ const nav = [
   ["Store Tracker", "/dashboard/store-tracker"],
   ["Saved Ads", "/dashboard/saved-ads"],
   ["Account", "/dashboard/account"],
-  ["TikTok Shop", "#"],
-  ["Magic AI", "#"],
-  ["Trends", "#"],
-  ["Brand Tracker", "#"]
+  ["TikTok Shop", "/dashboard/tiktok-shop"],
+  ["Magic AI", "/dashboard/magic-ai"],
+  ["Trends", "/dashboard/trends"],
+  ["Brand Tracker", "/dashboard/brand-tracker"]
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
@@ -22,7 +22,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
           <Link href="/dashboard/ads" className="text-xl font-black">WinningHunter<span className="text-violet-700">.AI</span></Link>
           <nav className="hidden gap-1 lg:flex">
             {nav.map(([label, href]) => (
-              <Link key={label} href={href} className={`rounded-xl px-3 py-2 text-sm font-semibold ${href === "#" ? "cursor-not-allowed text-slate-400" : "text-slate-700 hover:bg-slate-100"}`}>
+              <Link key={label} href={href} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                 {label}
               </Link>
             ))}

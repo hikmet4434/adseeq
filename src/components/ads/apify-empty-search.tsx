@@ -4,17 +4,16 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 
 const RESULT_LIMIT = 10;
-const MAX_COST_USD = 0.1;
+const RESULT_OPTIONS = [10, 25, 50, 100];
 
 export function ApifyEmptySearch({ query }: { query: string }) {
   const router = useRouter();
+  const [maxResults, setMaxResults] = useState(RESULT_LIMIT);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
 
   async function importFromApify() {
-    if (!window.confirm(`“${query}” için Apify'dan en fazla ${RESULT_LIMIT} reklam getirilsin mi? Harcama üst sınırı $${MAX_COST_USD.toFixed(2)}.`)) return;
-
     setBusy(true);
     setMessage("");
     try {
@@ -26,8 +25,8 @@ export function ApifyEmptySearch({ query }: { query: string }) {
           country: "ALL",
           adActiveStatus: "ACTIVE",
           mediaType: "ALL",
-          maxResults: RESULT_LIMIT,
-          maxCostUsd: MAX_COST_USD,
+          maxResults,
+          maxCostUsd: Math.max(0.1, Math.ceil(maxResults * 0.004 * 10) / 10),
           scrapeAdDetails: true,
           includeAboutPage: false
         })
@@ -52,15 +51,27 @@ export function ApifyEmptySearch({ query }: { query: string }) {
       <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
         Bu arama önce WinningHunter veritabanını kontrol eder. Yeni Meta reklamlarını Apify üzerinden getirip aynı aramaya ekleyebilirsiniz.
       </p>
-      <button
-        type="button"
-        disabled={busy}
-        onClick={importFromApify}
-        className="mt-5 rounded-2xl bg-violet-700 px-5 py-3 font-black text-white disabled:cursor-wait disabled:opacity-50"
-      >
-        {busy ? "Apify'dan getiriliyor…" : "Apify'dan 10 reklam getir"}
-      </button>
-      <p className="mt-2 text-xs text-slate-500">Harcama üst sınırı: $0.10 · Yalnızca yöneticiler</p>
+      <div className="mx-auto mt-5 flex max-w-sm gap-2">
+        <label className="sr-only" htmlFor="apify-result-count">Getirilecek reklam adedi</label>
+        <select
+          id="apify-result-count"
+          value={maxResults}
+          disabled={busy}
+          onChange={(event) => setMaxResults(Number(event.target.value))}
+          className="min-w-0 flex-1 rounded-2xl border border-violet-200 bg-white px-4 py-3 font-bold"
+        >
+          {RESULT_OPTIONS.map((count) => <option key={count} value={count}>{count} reklam</option>)}
+        </select>
+        <button
+          type="button"
+          disabled={busy}
+          onClick={importFromApify}
+          className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white disabled:cursor-wait disabled:opacity-50"
+        >
+          {busy ? "Getiriliyor…" : "Getir"}
+        </button>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">Apify · Yalnızca yöneticiler</p>
       {message && <p className={`mt-3 text-sm font-semibold ${error ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
     </div>
   );
