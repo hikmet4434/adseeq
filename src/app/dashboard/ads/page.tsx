@@ -6,6 +6,7 @@ import { maskAdForPlan } from "@/lib/locked-response";
 import { planFromUser } from "@/lib/plans";
 import { Card } from "@/components/ui/card";
 import { AdCreativeMedia } from "@/components/ad-creative-media";
+import { ApifyEmptySearch } from "@/components/ads/apify-empty-search";
 
 export default async function AdsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
@@ -45,6 +46,13 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
         {["Week's biggest winners", "US winners", "Dropship Ads", "Supplements", "Top Branded"].map((x) => <span key={x} className="rounded-full bg-violet-50 px-3 py-1 text-sm font-semibold text-violet-800">{x}</span>)}
       </div>
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+        {q && masked.length === 0 && isAdmin && <ApifyEmptySearch query={q} />}
+        {q && masked.length === 0 && !isAdmin && (
+          <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-8 text-center md:col-span-2 xl:col-span-3">
+            <h2 className="text-xl font-black">“{q}” için sonuç bulunamadı</h2>
+            <p className="mt-2 text-sm text-slate-500">Yeni reklamların içe aktarılması için yöneticinizle iletişime geçin.</p>
+          </div>
+        )}
         {masked.map((ad: any) => (
           <Card key={ad.id} className="relative overflow-hidden">
             {ad.isLocked && <div className="absolute inset-0 z-10 grid place-items-center bg-white/70 backdrop-blur-[2px]"><Link href="/pricing" className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white">Start now — Unlock winners</Link></div>}
