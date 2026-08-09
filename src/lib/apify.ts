@@ -2,7 +2,7 @@ import { AdSource, AdStatus, MediaType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
 
 const APIFY_API_BASE = "https://api.apify.com/v2";
-const DEFAULT_ACTOR_ID = "solidcode~meta-ads-library-scraper";
+const DEFAULT_ACTOR_ID = "aiscraperdev~facebook-meta-ads-library-scraper";
 
 export type ApifyIngestInput = {
   searchTerms: string[];
@@ -43,6 +43,55 @@ function stringArray(record: JsonRecord, ...keys: string[]) {
   return [];
 }
 
+function nestedRecords(record: JsonRecord) {
+  const queue: unknown[] = [record];
+  const records: JsonRecord[] = [];
+  const seen = new Set<object>();
+
+  while (queue.length && records.length < 500) {
+    const value = queue.shift();
+    if (!value || typeof value !== "object" || seen.has(value as object)) continue;
+    seen.add(value as object);
+    if (Array.isArray(value)) {
+      queue.push(...value);
+      continue;
+    }
+
+    const current = value as JsonRecord;
+    records.push(current);
+    queue.push(...Object.values(current));
+  }
+
+  return records;
+}
+
+function safeMediaUrl(value: unknown) {
+  if (typeof value !== "string" || !value.trim()) return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
+  } catch {
+    return null;
+  }
+}
+
+function deepUrlValue(record: JsonRecord, ...keys: string[]) {
+  const records = nestedRecords(record);
+  for (const key of keys) {
+    for (const current of records) {
+      const value = current[key];
+      const direct = safeMediaUrl(value);
+      if (direct) return direct;
+      if (!Array.isArray(value)) continue;
+      for (const item of value) {
+        const nested = safeMediaUrl(item);
+        if (nested) return nested;
+      }
+    }
+  }
+  return null;
+}
+
 function dateValue(value: unknown) {
   if (typeof value !== "string" || !value) return null;
   const date = new Date(value);
@@ -50,74 +99,79 @@ function dateValue(value: unknown) {
 }
 
 function firstMediaUrl(record: JsonRecord) {
-  const arrays = ["videoUrls", "videos", "imageUrls", "images", "videoPreviewImageUrls"];
-  for (const key of arrays) {
-    const values = stringArray(record, key);
-    if (values[0]) return values[0];
-  }
-  return stringValue(record, "videoHdUrl", "videoUrl", "imageUrl", "adSnapshotUrl", "snapshotUrl");
+  return deepUrlValue(
+    record,
+    "videoHdUrl", "video_hd_url", "videoSdUrl", "video_sd_url", "videoUrl", "video_url", "videoUrls",
+    "originalImageUrl", "original_image_url", "resizedImageUrl", "resized_image_url", "imageUrl", "image_url", "imageUrls",
+    "videoPreviewImageUrl", "video_preview_image_url", "videoPreviewImageUrls"
+  );
 }
 
 function firstThumbnailUrl(record: JsonRecord) {
-  for (const key of ["videoPreviewImageUrls", "imageUrls", "images"]) {
-    const values = stringArray(record, key);
-    if (values[0]) return values[0];
-  }
-  return stringValue(record, "thumbnailUrl", "imageUrl", "pageProfilePictureURL");
+  return deepUrlValue(
+    record,
+    "videoPreviewImageUrl", "video_preview_image_url", "videoPreviewImageUrls",
+    "thumbnailUrl", "thumbnail_url",
+    "originalImageUrl", "original_image_url", "resizedImageUrl", "resized_image_url", "imageUrl", "image_url", "imageUrls"
+  );
 }
 
 function mappedMediaType(record: JsonRecord): MediaType {
-  const raw = stringValue(record, "mediaType", "media_type", "adFormat")?.toUpperCase();
+  const raw = stringValue(record, "mediaType", "media_type", "adFormat", "ad_format")?.toUpperCase();
   if (raw === "VIDEO") return MediaType.VIDEO;
   if (raw === "IMAGE" || raw === "MEME") return MediaType.IMAGE;
   if (raw === "CAROUSEL" || raw === "DPA") return MediaType.CAROUSEL;
-  if (stringArray(record, "videoUrls", "videos").length) return MediaType.VIDEO;
-  if (stringArray(record, "imageUrls", "images").length) return MediaType.IMAGE;
+  if (deepUrlValue(record, "videoHdUrl", "video_hd_url", "videoSdUrl", "video_sd_url", "videoUrl", "video_url", "videoUrls")) return MediaType.VIDEO;
+  if (deepUrlValue(record, "originalImageUrl", "original_image_url", "resizedImageUrl", "resized_image_url", "imageUrl", "image_url", "imageUrls")) return MediaType.IMAGE;
   return MediaType.UNKNOWN;
 }
 
 export function normalizeApifyAd(record: JsonRecord) {
-  const externalAdId = stringValue(record, "adArchiveID", "adArchiveId", "ad_archive_id", "id");
+  const externalAdId = stringValue(record, "adArchiveID", "adArchiveId", "ad_archive_id", "ad_id", "id");
   if (!externalAdId) return null;
-  const pageId = stringValue(record, "pageID", "pageId", "page_id");
+  const explicitPageId = stringValue(record, "pageID", "pageId", "page_id");
   const pageName = stringValue(record, "pageName", "page_name", "advertiserName") || "Bilinmeyen reklamveren";
+  const pageId = explicitPageId || (pageName === "Bilinmeyen reklamveren" ? null : `name:${pageName.toLocaleLowerCase("en-US")}`);
   const firstSeenAt = dateValue(record.startDate ?? record.start_date ?? record.adDeliveryStartTime);
   const endDate = dateValue(record.endDate ?? record.end_date ?? record.adDeliveryStopTime);
   const referenceDate = endDate || new Date();
   const daysRunning = firstSeenAt ? Math.max(1, Math.ceil((referenceDate.getTime() - firstSeenAt.getTime()) / 86_400_000)) : null;
-  const statusText = stringValue(record, "adStatus", "status", "ad_active_status")?.toUpperCase();
+  const statusText = stringValue(record, "adStatus", "status", "ad_active_status", "ad_status")?.toUpperCase();
   const status = statusText === "ACTIVE" ? AdStatus.ACTIVE : statusText === "INACTIVE" ? AdStatus.INACTIVE : AdStatus.UNKNOWN;
-  const primaryText = stringValue(record, "adText", "primaryText", "bodyText") || stringArray(record, "adCreativeBodies", "ad_creative_bodies")[0] || null;
+  const primaryText = stringValue(record, "adText", "primaryText", "bodyText", "ad_body_text") || stringArray(record, "adCreativeBodies", "ad_creative_bodies")[0] || null;
   const countries = stringArray(record, "countries", "reachedCountries", "ad_reached_countries");
-  const country = stringValue(record, "country", "pageCountry");
+  const country = stringValue(record, "country", "pageCountry", "page_country");
   if (!countries.length && country) countries.push(country);
+
+  const thumbnailUrl = firstThumbnailUrl(record);
+  const creativeUrl = firstMediaUrl(record) || thumbnailUrl;
 
   return {
     externalAdId,
     pageId,
     pageName,
-    pageUrl: stringValue(record, "pageURL", "pageUrl"),
-    pageLogoUrl: stringValue(record, "pageProfilePictureURL", "pageProfilePictureUrl"),
+    pageUrl: stringValue(record, "pageURL", "pageUrl", "page_url"),
+    pageLogoUrl: stringValue(record, "pageProfilePictureURL", "pageProfilePictureUrl", "page_profile_picture_url"),
     pageLikes: numberValue(record.pageLikes),
     pageFollowers: numberValue(record.pageInstagramFollowers),
     status,
     mediaType: mappedMediaType(record),
     primaryText,
-    headline: stringValue(record, "ctaHeadline", "headline", "title"),
-    description: stringValue(record, "ctaDescription", "description"),
-    ctaText: stringValue(record, "ctaText", "ctaType", "callToAction"),
-    landingUrl: stringValue(record, "ctaUrl", "landingUrl", "linkUrl"),
-    productUrl: stringValue(record, "adLibraryURL", "adLibraryUrl"),
+    headline: stringValue(record, "ctaHeadline", "headline", "title", "ad_headline"),
+    description: stringValue(record, "ctaDescription", "description", "ad_description"),
+    ctaText: stringValue(record, "ctaText", "ctaType", "callToAction", "cta_text"),
+    landingUrl: stringValue(record, "ctaUrl", "landingUrl", "linkUrl", "landing_page_url"),
+    productUrl: stringValue(record, "adLibraryURL", "adLibraryUrl", "ad_library_url"),
     language: stringValue(record, "language"),
     countries,
     firstSeenAt,
     lastSeenAt: endDate,
     createdAtSource: dateValue(record.adCreationTime ?? record.ad_creation_time),
-    daysRunning,
+    daysRunning: numberValue(record.ad_active_duration_days) ?? daysRunning,
     estimatedReachMin: numberValue(record.reachEstimate),
     estimatedSpendMin: numberValue(record.spend),
-    creativeUrl: firstMediaUrl(record),
-    thumbnailUrl: firstThumbnailUrl(record),
+    creativeUrl,
+    thumbnailUrl,
     raw: record as Prisma.InputJsonValue
   };
 }
@@ -144,16 +198,7 @@ export async function runApifyActor(input: ApifyIngestInput) {
     const response = await fetch(`${APIFY_API_BASE}/actors/${actorId}/run-sync-get-dataset-items?${query}`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({
-        searchTerms: input.searchTerms,
-        country: input.country,
-        adActiveStatus: input.adActiveStatus,
-        mediaType: input.mediaType,
-        adType: "ALL",
-        maxResults: input.maxResults,
-        scrapeAdDetails: input.scrapeAdDetails,
-        includeAboutPage: input.includeAboutPage
-      }),
+      body: JSON.stringify(actorInput(actorId, input)),
       signal: controller.signal,
       cache: "no-store"
     });
@@ -167,6 +212,31 @@ export async function runApifyActor(input: ApifyIngestInput) {
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function actorInput(actorId: string, input: ApifyIngestInput) {
+  if (actorId === "aiscraperdev~facebook-meta-ads-library-scraper") {
+    return {
+      searchQueries: input.searchTerms,
+      countryCode: input.country,
+      adStatus: input.adActiveStatus.toLowerCase(),
+      adType: "all",
+      mediaType: input.mediaType.toLowerCase(),
+      platform: "all",
+      maxResults: input.maxResults
+    };
+  }
+
+  return {
+    searchTerms: input.searchTerms,
+    country: input.country,
+    adActiveStatus: input.adActiveStatus,
+    mediaType: input.mediaType,
+    adType: "ALL",
+    maxResults: input.maxResults,
+    scrapeAdDetails: input.scrapeAdDetails,
+    includeAboutPage: input.includeAboutPage
+  };
 }
 
 export async function importApifyAds(records: JsonRecord[]) {
@@ -212,4 +282,3 @@ export async function importApifyAds(records: JsonRecord[]) {
   }
   return { imported, failed };
 }
-

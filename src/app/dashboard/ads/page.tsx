@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/current-user";
 import { maskAdForPlan } from "@/lib/locked-response";
 import { planFromUser } from "@/lib/plans";
 import { Card } from "@/components/ui/card";
+import { AdCreativeMedia } from "@/components/ad-creative-media";
 
 export default async function AdsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
@@ -48,7 +49,7 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
           <Card key={ad.id} className="relative overflow-hidden">
             {ad.isLocked && <div className="absolute inset-0 z-10 grid place-items-center bg-white/70 backdrop-blur-[2px]"><Link href="/pricing" className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white">Start now — Unlock winners</Link></div>}
             <div className={ad.isLocked ? "locked-blur" : ""}>
-              <img src={ad.creatives[0]?.thumbnailUrl || "https://placehold.co/640x480"} alt="" className="mb-4 h-44 w-full rounded-2xl object-cover" />
+              <AdCreativeMedia creative={ad.creatives[0]} className="mb-4 h-44 w-full rounded-2xl object-cover" />
               <div className="mb-2 flex items-center justify-between">
                 <div className="font-black">{ad.headline}</div>
                 <div className="rounded-full bg-emerald-50 px-2 py-1 text-xs font-bold text-emerald-700">Top %{Math.round(ad.rankPercentile || 0)}</div>

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/db";
 import { requireUser } from "@/lib/auth/current-user";
 import { Card } from "@/components/ui/card";
+import { AdCreativeMedia } from "@/components/ad-creative-media";
 
 export default async function StoreDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = await params;
@@ -47,7 +48,7 @@ export default async function StoreDetailPage({ params }: { params: Promise<{ id
       <Card className="mt-5">
         <h2 className="mb-4 text-xl font-black">Top Meta Ads</h2>
         <div className="grid gap-4 md:grid-cols-3">
-          {ads.map((ad) => <div key={ad.id} className="rounded-2xl border border-slate-100 p-3"><img src={ad.creatives[0]?.thumbnailUrl || ""} className="mb-3 h-32 w-full rounded-xl object-cover" /><div className="font-black">{ad.headline}</div><div className="text-sm text-slate-500">Top %{ad.rankPercentile} · {ad.daysRunning} gün</div></div>)}
+          {ads.map((ad) => <div key={ad.id} className="rounded-2xl border border-slate-100 p-3"><AdCreativeMedia creative={ad.creatives[0]} className="mb-3 h-32 w-full rounded-xl object-cover" /><div className="font-black">{ad.headline}</div><div className="text-sm text-slate-500">Top %{ad.rankPercentile} · {ad.daysRunning} gün</div></div>)}
         </div>
       </Card>
       <Card className="mt-5">

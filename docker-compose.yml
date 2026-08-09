@@ -30,7 +30,7 @@ services:
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       APIFY_TOKEN: ${APIFY_TOKEN:-}
-      APIFY_ACTOR_ID: ${APIFY_ACTOR_ID:-solidcode~meta-ads-library-scraper}
+      APIFY_ACTOR_ID: ${APIFY_ACTOR_ID:-aiscraperdev~facebook-meta-ads-library-scraper}
     ports:
       - "${PORT:-3000}:3000"
     command: sh -c "npx prisma db push && npm run start"
