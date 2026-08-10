@@ -26,7 +26,7 @@ async function sendAlertEmail(email: string, title: string, brand: string) {
   const key = process.env.RESEND_API_KEY?.trim();
   const from = process.env.ALERT_FROM_EMAIL?.trim();
   if (!key || !from) return false;
-  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" }, body: JSON.stringify({ from, to: [email], subject: `${brand}: yeni reklam`, html: `<p><strong>${brand}</strong> için yeni reklam bulundu.</p><p>${title}</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL || ""}/dashboard/brand-tracker">WinningHunter'da görüntüle</a></p>` }) });
+  const response = await fetch("https://api.resend.com/emails", { method: "POST", headers: { authorization: `Bearer ${key}`, "content-type": "application/json" }, body: JSON.stringify({ from, to: [email], subject: `${brand}: yeni reklam`, html: `<p><strong>${brand}</strong> için yeni reklam bulundu.</p><p>${title}</p><p><a href="${process.env.NEXT_PUBLIC_APP_URL || ""}/dashboard/brand-tracker">AdSeeQ'da görüntüle</a></p>` }) });
   return response.ok;
 }
 

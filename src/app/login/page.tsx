@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { BrandLogo } from "@/components/brand-logo";
 
 function GoogleIcon() {
   return (
@@ -36,6 +37,7 @@ export default function LoginPage() {
   return (
     <main className="grid min-h-screen place-items-center bg-slate-50 px-4">
       <form onSubmit={submit} className="w-full max-w-md rounded-3xl bg-white p-8 shadow-soft">
+        <a href="/" className="mb-7 inline-flex"><BrandLogo /></a>
         <h1 className="text-3xl font-black">Giriş yap</h1>
         <p className="mt-2 text-sm text-slate-500">Hesabınızla veya Google üzerinden güvenli giriş yapın.</p>
         

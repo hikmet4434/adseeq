@@ -1,10 +1,11 @@
 import { LinkButton } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default function LandingPage() {
   return (
     <main className="min-h-screen overflow-hidden bg-[radial-gradient(circle_at_top_left,#ddd6fe,transparent_35%),#f8fafc]">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-6 py-6">
-        <div className="text-xl font-black tracking-tight">WinningHunter<span className="text-violet-700">.AI</span></div>
+        <BrandLogo />
         <div className="flex gap-3">
           <LinkButton href="/login" className="bg-white text-slate-900 hover:bg-slate-100">Giriş</LinkButton>
           <LinkButton href="/pricing">Planlar</LinkButton>
@@ -13,13 +14,13 @@ export default function LandingPage() {
       <section className="mx-auto grid max-w-7xl gap-10 px-6 py-20 lg:grid-cols-[1.05fr_0.95fr] lg:items-center">
         <div>
           <div className="mb-5 inline-flex rounded-full border border-violet-200 bg-white/70 px-4 py-2 text-sm font-semibold text-violet-800">
-            Meta Ads + Shopify Store Intelligence MVP
+            Meta Ads + TikTok Shop + AI Trend Intelligence
           </div>
           <h1 className="max-w-4xl text-5xl font-black leading-tight tracking-tight text-slate-950 md:text-7xl">
             Kazanan reklamları ve mağazaları dakikalar içinde keşfet.
           </h1>
           <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-            Dropshipping ve e-ticaret için reklam kütüphanesi, mağaza keşfi, kaydetme, takip ve kota tabanlı üyelik altyapısı tek panelde.
+            Meta reklam kütüphanesi, TikTok Shop ürün keşfi, Magic AI trend analizi ve rakip marka takibi tek panelde.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <LinkButton href="/register" className="px-6 py-3">Ücretsiz başla</LinkButton>

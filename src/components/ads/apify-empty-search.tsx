@@ -43,7 +43,7 @@ export function ApifyEmptySearch({ query, planLimit }: { query: string; planLimi
     <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50/60 p-8 text-center md:col-span-2 xl:col-span-3">
       <h2 className="text-xl font-black">“{query}” için kayıtlı reklam bulunamadı</h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
-        Bu arama önce WinningHunter veritabanını kontrol eder. Yeni Meta reklamlarını Apify üzerinden getirip aynı aramaya ekleyebilirsiniz.
+        Bu arama önce AdSeeQ veritabanını kontrol eder. Yeni Meta reklamlarını Apify üzerinden getirip aynı aramaya ekleyebilirsiniz.
       </p>
       <div className="mx-auto mt-5 flex max-w-sm gap-2">
         <label className="sr-only" htmlFor="apify-result-count">Getirilecek reklam adedi</label>

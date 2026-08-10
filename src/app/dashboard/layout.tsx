@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/current-user";
 import { DashboardMobileNav } from "@/components/dashboard-mobile-nav";
+import { BrandLogo } from "@/components/brand-logo";
 
 const nav = [
   ["Ads", "/dashboard/ads"],
@@ -20,7 +21,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
     <div className="min-h-screen bg-slate-50">
       <header className="sticky top-0 z-30 border-b border-slate-200 bg-white/90 backdrop-blur">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
-          <Link href="/dashboard/ads" className="text-xl font-black">WinningHunter<span className="text-violet-700">.AI</span></Link>
+          <Link href="/dashboard/ads"><BrandLogo markClassName="h-8 w-8" /></Link>
           <DashboardMobileNav isAdmin={user.role === "ADMIN"} />
           <nav className="hidden gap-1 lg:flex">
             {nav.map(([label, href]) => (

@@ -25,7 +25,7 @@ export default async function AdminOverviewPage() {
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
-        <div><div className="text-sm font-black uppercase tracking-[0.2em] text-violet-600">Kontrol Merkezi</div><h1 className="mt-1 text-3xl font-black">WinningHunter Admin</h1><p className="mt-1 text-slate-500">Kullanıcı, gelir, kredi ve operasyon görünümü.</p></div>
+        <div><div className="text-sm font-black uppercase tracking-[0.2em] text-violet-600">Kontrol Merkezi</div><h1 className="mt-1 text-3xl font-black">AdSeeQ Admin</h1><p className="mt-1 text-slate-500">Kullanıcı, gelir, kredi ve operasyon görünümü.</p></div>
         <div className="rounded-2xl bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-700">Sistem aktif</div>
       </div>
       <AdminNav />

@@ -1,6 +1,6 @@
-# WinningHunter MVP
+# AdSeeQ
 
-WinningHunter klonu için çalışan MVP:
+Meta reklamları, TikTok Shop ürünleri, trendler ve rakip markalar için çalışan reklam zekâsı platformu:
 
 - Next.js 16 + React 19
 - Prisma + PostgreSQL
@@ -61,11 +61,11 @@ docker compose up -d --build
 1. Yeni proje oluştur.
 2. Git repo veya ZIP kaynak olarak bu klasörü bağla.
 3. Build type: Dockerfile.
-4. Domain: `winninghunter.your-domain.com`.
+4. Domain: `adseeq.com`.
 5. Env:
 
 ```env
-NEXT_PUBLIC_APP_URL=https://winninghunter.your-domain.com
+NEXT_PUBLIC_APP_URL=https://adseeq.com
 DATABASE_URL=postgresql://...
 AUTH_COOKIE_NAME=wh_session
 AUTH_SESSION_DAYS=30

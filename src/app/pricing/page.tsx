@@ -2,6 +2,7 @@ import { prisma } from "@/lib/db";
 import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckoutButton } from "@/components/checkout-button";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default async function PricingPage() {
   const plans = await prisma.plan.findMany({ orderBy: { sortOrder: "asc" } }).catch(() => []);
@@ -15,6 +16,7 @@ export default async function PricingPage() {
   return (
     <main className="min-h-screen bg-slate-50 px-6 py-12">
       <div className="mx-auto max-w-6xl">
+        <a href="/" className="mb-10 inline-flex"><BrandLogo /></a>
         <div className="mb-10 text-center">
           <h1 className="text-4xl font-black">Fiyatlandırma</h1>
           <p className="mt-3 text-slate-600">Kota tabanlı freemium model: arama, takip ve API kredileri planlara göre açılır.</p>
