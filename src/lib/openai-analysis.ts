@@ -5,7 +5,7 @@ export type CreativeAnalysis = { summary: string; insights: Array<{ title: strin
 export async function analyzeCreatives(query: string | undefined, ads: AdSignal[]): Promise<CreativeAnalysis & { model: string }> {
   const apiKey = process.env.OPENAI_API_KEY?.trim();
   if (!apiKey) throw new Error("OPENAI_NOT_CONFIGURED");
-  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5.6-luna";
+  const model = process.env.OPENAI_MODEL?.trim() || "gpt-5";
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), 45_000);
   try {
@@ -48,7 +48,8 @@ export async function analyzeCreatives(query: string | undefined, ads: AdSignal[
             }
           }
         },
-        max_output_tokens: 1200
+        reasoning: { effort: "minimal" },
+        max_output_tokens: 2400
       }),
       signal: controller.signal,
       cache: "no-store"
