@@ -17,6 +17,13 @@ async function runSeed() {
 }
 
 async function main() {
+  if (process.env.ENABLE_DEMO_ACCOUNTS !== "true") {
+    const removed = await prisma.user.deleteMany({
+      where: { email: { in: ["demo@winninghunter.local", "admin@winninghunter.local"] } }
+    });
+    if (removed.count > 0) console.log(`🔒 ${removed.count} public demo account(s) removed.`);
+  }
+
   const [plans, users, ads] = await Promise.all([
     prisma.plan.count(),
     prisma.user.count(),
