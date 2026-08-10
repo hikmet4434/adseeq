@@ -6,6 +6,8 @@ import { getFeatureLimit } from "../src/lib/plans";
 import { istemciIp, hizSiniriAsimi } from "../src/lib/rate-limit";
 import { stripePriceFor } from "../src/lib/stripe";
 import { tikTokActorInput } from "../src/lib/apify-tiktok";
+import { NextRequest } from "next/server";
+import { proxy } from "../src/proxy";
 
 test("Apify reklamı metin, medya ve ülke alanlarıyla normalize edilir", () => {
   const ad = normalizeApifyAd({
@@ -55,4 +57,22 @@ test("TikTok aktör girdisi resmi şemadaki alanları kullanır", () => {
   assert.deepEqual(tikTokActorInput({ query: "phone case", region: "US", maxResults: 10 }), {
     keyword: "phone case", region: "US", maxItems: 10, addonProductDetails: false
   });
+});
+
+test("eski alan adı yol ve sorguyu koruyarak AdSeeQ'a yönlenir", () => {
+  const request = new NextRequest("http://localhost/dashboard/ads?q=berber", {
+    headers: { "x-forwarded-host": "kazananavci.seymata.com" }
+  });
+  const response = proxy(request);
+  assert.equal(response.status, 301);
+  assert.equal(response.headers.get("location"), "https://adseeq.com/dashboard/ads?q=berber");
+});
+
+test("AdSeeQ ana alan adı yönlendirilmez", () => {
+  const request = new NextRequest("https://adseeq.com/dashboard/ads", {
+    headers: { host: "adseeq.com" }
+  });
+  const response = proxy(request);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get("location"), null);
 });
