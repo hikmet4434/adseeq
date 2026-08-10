@@ -47,7 +47,7 @@ export async function runTikTokShopActor(input: { query: string; region: string;
     const response = await fetch(`${API_BASE}/actors/${actor}/run-sync-get-dataset-items?${params}`, {
       method: "POST",
       headers: { authorization: `Bearer ${token}`, "content-type": "application/json", accept: "application/json" },
-      body: JSON.stringify({ search_word: input.query, region: input.region, maxItems: input.maxResults, enrichProductDetails: false }),
+      body: JSON.stringify(tikTokActorInput(input)),
       signal: controller.signal,
       cache: "no-store"
     });
@@ -59,6 +59,10 @@ export async function runTikTokShopActor(input: { query: string; region: string;
     if (error instanceof Error && error.name === "AbortError") throw new Error("APIFY_TIKTOK_TIMEOUT");
     throw error;
   } finally { clearTimeout(timer); }
+}
+
+export function tikTokActorInput(input: { query: string; region: string; maxResults: number }) {
+  return { keyword: input.query, region: input.region, maxItems: input.maxResults, addonProductDetails: false };
 }
 
 export async function importTikTokProducts(rows: Row[], region: string) {

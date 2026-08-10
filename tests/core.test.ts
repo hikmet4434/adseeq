@@ -5,6 +5,7 @@ import { normalizeApifyAd } from "../src/lib/apify";
 import { getFeatureLimit } from "../src/lib/plans";
 import { istemciIp, hizSiniriAsimi } from "../src/lib/rate-limit";
 import { stripePriceFor } from "../src/lib/stripe";
+import { tikTokActorInput } from "../src/lib/apify-tiktok";
 
 test("Apify reklamı metin, medya ve ülke alanlarıyla normalize edilir", () => {
   const ad = normalizeApifyAd({
@@ -48,4 +49,10 @@ test("Stripe fiyat kimliği env allowlist'inden okunur", () => {
   assert.throws(() => stripePriceFor("BASIC", "monthly"), /STRIPE_PRICE_NOT_CONFIGURED/);
   if (previous === undefined) delete process.env.STRIPE_PRICE_BASIC_MONTHLY;
   else process.env.STRIPE_PRICE_BASIC_MONTHLY = previous;
+});
+
+test("TikTok aktör girdisi resmi şemadaki alanları kullanır", () => {
+  assert.deepEqual(tikTokActorInput({ query: "phone case", region: "US", maxResults: 10 }), {
+    keyword: "phone case", region: "US", maxItems: 10, addonProductDetails: false
+  });
 });

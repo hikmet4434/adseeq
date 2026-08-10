@@ -6,7 +6,7 @@ import { planFromUser } from "@/lib/plans";
 import { checkAndConsumeQuota, refundQuota } from "@/lib/quota";
 import { hizSiniriAsimi } from "@/lib/rate-limit";
 
-const schema = z.object({ query: z.string().trim().min(2).max(100), region: z.enum(["US", "GB", "DE", "FR", "TR"]).default("US"), maxResults: z.coerce.number().int().refine((v) => [10, 25, 50].includes(v)) });
+const schema = z.object({ query: z.string().trim().min(2).max(100), region: z.enum(["US", "GB", "SG", "MY", "PH", "TH", "VN", "ID"]).default("US"), maxResults: z.coerce.number().int().refine((v) => [10, 25, 50].includes(v)) });
 
 export async function POST(request: Request) {
   const limited = hizSiniriAsimi(request, "arama");

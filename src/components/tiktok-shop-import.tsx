@@ -21,7 +21,7 @@ export function TikTokShopImport({ planLimit }: { planLimit: number }) {
   }
   return <div className="mb-5 grid gap-3 rounded-3xl bg-white p-4 shadow-soft md:grid-cols-[1fr_120px_130px_130px]">
     <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="TikTok Shop ürününü canlı ara" className="rounded-2xl border border-slate-200 px-4 py-3" />
-    <select value={region} onChange={(e) => setRegion(e.target.value)} className="rounded-2xl border border-slate-200 px-3"><option>US</option><option>GB</option><option>DE</option><option>FR</option><option>TR</option></select>
+    <select value={region} onChange={(e) => setRegion(e.target.value)} className="rounded-2xl border border-slate-200 px-3"><option>US</option><option>GB</option><option>SG</option><option>MY</option><option>PH</option><option>TH</option><option>VN</option><option>ID</option></select>
     <select value={count} onChange={(e) => setCount(Number(e.target.value))} className="rounded-2xl border border-slate-200 px-3">{[10,25,50].filter((v) => v <= planLimit).map((v) => <option key={v} value={v}>{v} ürün</option>)}</select>
     <button type="button" onClick={run} disabled={busy || planLimit === 0 || query.trim().length < 2} className="rounded-2xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-50">{busy ? "Getiriliyor…" : planLimit ? "Apify’dan getir" : "Planı yükselt"}</button>
     {message && <p className="text-sm font-semibold text-violet-700 md:col-span-4">{message}</p>}
