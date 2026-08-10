@@ -23,14 +23,15 @@ export function CreditAdjustForm({ userId, currentBalance }: { userId: string; c
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    const form = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const form = new FormData(formElement);
     const operation = String(form.get("operation"));
     const amount = Number(form.get("amount"));
     if (operation === "remove" && !window.confirm(`${amount} kredi bakiyeden çıkarılsın mı?`)) return;
     setBusy(true); setMessage("");
     try {
       const result = await postJson(`/api/admin/users/${userId}/credits`, { operation, amount, reason: form.get("reason") });
-      setIsError(false); setMessage(`Yeni bakiye: ${result.balance}`); event.currentTarget.reset(); router.refresh();
+      setIsError(false); setMessage(`Yeni bakiye: ${result.balance}`); formElement.reset(); router.refresh();
     } catch (error) { setIsError(true); setMessage(error instanceof Error ? error.message : "İşlem başarısız"); }
     finally { setBusy(false); }
   }
@@ -95,10 +96,10 @@ export function PlanForm({ userId, currentPlan, plans }: { userId: string; curre
 export function ManualPaymentForm({ users }: { users: Array<{ id: string; email: string }> }) {
   const router = useRouter(); const [busy, setBusy] = useState(false); const [message, setMessage] = useState(""); const [isError, setIsError] = useState(false);
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); const form = new FormData(event.currentTarget); setBusy(true); setMessage("");
+    event.preventDefault(); const formElement = event.currentTarget; const form = new FormData(formElement); setBusy(true); setMessage("");
     try {
       await postJson("/api/admin/payments", { userId: form.get("userId"), amountCents: Math.round(Number(form.get("amount")) * 100), currency: form.get("currency"), creditGranted: Number(form.get("creditGranted") || 0), description: form.get("description"), externalId: form.get("externalId") || null });
-      setIsError(false); setMessage("Ödeme kaydedildi"); event.currentTarget.reset(); router.refresh();
+      setIsError(false); setMessage("Ödeme kaydedildi"); formElement.reset(); router.refresh();
     } catch (error) { setIsError(true); setMessage(error instanceof Error ? error.message : "İşlem başarısız"); }
     finally { setBusy(false); }
   }
