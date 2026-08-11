@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import "./globals.css";
-
-const appUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+import { SITE_DESCRIPTION, SITE_NAME, SITE_URL } from "@/lib/seo";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(appUrl),
-  applicationName: "AdSeeQ",
+  metadataBase: new URL(SITE_URL),
+  applicationName: SITE_NAME,
   title: {
     default: "AdSeeQ — Reklam ve Trend Zekâsı",
     template: "%s | AdSeeQ"
   },
-  description: "Meta reklamlarını, TikTok Shop ürünlerini, yükselen trendleri ve rakip markaları yapay zekâ ile tek panelden keşfedin.",
+  description: SITE_DESCRIPTION,
   keywords: ["reklam kütüphanesi", "Meta Ads", "TikTok Shop", "trend analizi", "marka takibi", "reklam zekâsı"],
-  alternates: { canonical: "/" },
+  alternates: {
+    canonical: "/",
+    languages: { "tr-TR": "/" }
+  },
   openGraph: {
     title: "AdSeeQ — Kazanan reklamları ve trendleri keşfedin",
     description: "Meta Ads, TikTok Shop, Magic AI Trends ve Brand Tracker tek panelde.",
@@ -26,7 +28,17 @@ export const metadata: Metadata = {
     title: "AdSeeQ — Reklam ve Trend Zekâsı",
     description: "Kazanan reklamları, ürünleri ve rakip marka hareketlerini keşfedin."
   },
-  robots: { index: true, follow: true }
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1
+    }
+  }
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

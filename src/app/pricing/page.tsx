@@ -3,6 +3,18 @@ import { LinkButton } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { CheckoutButton } from "@/components/checkout-button";
 import { BrandLogo } from "@/components/brand-logo";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Fiyatlandırma",
+  description: "AdSeeQ Free, Basic, Standard ve Premium planlarının reklam arama, mağaza takip ve kayıt limitlerini karşılaştırın.",
+  alternates: { canonical: "/pricing", languages: { "tr-TR": "/pricing" } },
+  openGraph: {
+    title: "AdSeeQ Fiyatlandırma",
+    description: "İhtiyacınıza uygun reklam ve trend araştırma planını seçin.",
+    url: "/pricing"
+  }
+};
 
 export default async function PricingPage() {
   const plans = await prisma.plan.findMany({ orderBy: { sortOrder: "asc" } }).catch(() => []);

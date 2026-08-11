@@ -2,6 +2,12 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth/current-user";
 import { DashboardMobileNav } from "@/components/dashboard-mobile-nav";
 import { BrandLogo } from "@/components/brand-logo";
+import type { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Dashboard",
+  robots: { index: false, follow: false, nocache: true }
+};
 
 const nav = [
   ["Ads", "/dashboard/ads"],

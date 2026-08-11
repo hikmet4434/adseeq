@@ -8,6 +8,10 @@ import { stripePriceFor } from "../src/lib/stripe";
 import { tikTokActorInput } from "../src/lib/apify-tiktok";
 import { NextRequest } from "next/server";
 import { proxy } from "../src/proxy";
+import sitemap from "../src/app/sitemap";
+import robots from "../src/app/robots";
+import { GET as llmsTxt } from "../src/app/llms.txt/route";
+import { homeStructuredData, serializeJsonLd } from "../src/lib/seo";
 
 test("Apify reklamı metin, medya ve ülke alanlarıyla normalize edilir", () => {
   const ad = normalizeApifyAd({
@@ -75,4 +79,35 @@ test("AdSeeQ ana alan adı yönlendirilmez", () => {
   const response = proxy(request);
   assert.equal(response.status, 200);
   assert.equal(response.headers.get("location"), null);
+});
+
+test("sitemap yalnızca indekslenebilir herkese açık sayfaları içerir", () => {
+  const urls = sitemap().map((entry) => entry.url);
+  assert.deepEqual(urls, ["https://adseeq.com", "https://adseeq.com/pricing"]);
+  assert.equal(new Set(urls).size, urls.length);
+});
+
+test("robots özel alanları engeller ve sitemap adresini bildirir", () => {
+  const value = robots();
+  assert.equal(value.sitemap, "https://adseeq.com/sitemap.xml");
+  assert.deepEqual(value.rules, {
+    userAgent: "*",
+    allow: ["/", "/pricing", "/llms.txt"],
+    disallow: ["/api/", "/dashboard/", "/login", "/register"]
+  });
+});
+
+test("llms.txt ürün kapsamını düz metin olarak açıklar", async () => {
+  const response = llmsTxt();
+  const body = await response.text();
+  assert.match(response.headers.get("content-type") || "", /^text\/plain/);
+  assert.match(body, /Meta Ads Library/);
+  assert.match(body, /https:\/\/adseeq\.com\/pricing/);
+});
+
+test("ana sayfa JSON-LD verisi yazılım ve SSS şemalarını içerir", () => {
+  const value = serializeJsonLd(homeStructuredData);
+  assert.match(value, /SoftwareApplication/);
+  assert.match(value, /FAQPage/);
+  assert.equal(value.includes("<"), false);
 });
