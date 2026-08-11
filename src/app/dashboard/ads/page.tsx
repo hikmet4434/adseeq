@@ -15,11 +15,21 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
   const q = resolvedSearchParams.q?.trim();
   const niche = resolvedSearchParams.niche;
   const mediaType = resolvedSearchParams.mediaType;
-  const where: Prisma.AdWhereInput = {};
+  const displayableCreativeWhere: Prisma.AdCreativeWhereInput = { url: { not: "" } };
+  const where: Prisma.AdWhereInput = { creatives: { some: displayableCreativeWhere } };
   if (q) where.OR = [{ primaryText: { contains: q, mode: "insensitive" } }, { headline: { contains: q, mode: "insensitive" } }, { brandPage: { name: { contains: q, mode: "insensitive" } } }];
   if (niche) where.niche = { contains: niche, mode: "insensitive" };
   if (mediaType) where.mediaType = mediaType as any;
-  const ads = await prisma.ad.findMany({ where, include: { brandPage: true, creatives: { take: 1 }, savedBy: { where: { userId: user.id } } }, orderBy: { rankPercentile: "asc" }, take: 48 });
+  const ads = await prisma.ad.findMany({
+    where,
+    include: {
+      brandPage: true,
+      creatives: { where: displayableCreativeWhere, orderBy: { position: "asc" }, take: 1 },
+      savedBy: { where: { userId: user.id } }
+    },
+    orderBy: { rankPercentile: "asc" },
+    take: 48
+  });
   const isAdmin = user.role === "ADMIN";
   const apifyPlanLimit = isAdmin || plan?.code === "PREMIUM" ? 100 : plan?.code === "STANDARD" ? 50 : plan?.code === "BASIC" ? 25 : 0;
   const masked = ads.map((ad) => maskAdForPlan({ ...ad, isSaved: ad.savedBy.length > 0 }, plan?.code, isAdmin));
