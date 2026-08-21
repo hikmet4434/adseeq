@@ -18,6 +18,7 @@ export const KURALLAR = {
   giris: { limit: 10, sureMs: 15 * 60 * 1000 },
   kayit: { limit: 5, sureMs: 60 * 60 * 1000 },
   arama: { limit: 60, sureMs: 60 * 1000 },
+  medya: { limit: 300, sureMs: 60 * 1000 },
 } as const;
 
 export type KuralAdi = keyof typeof KURALLAR;

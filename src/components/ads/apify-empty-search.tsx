@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const RESULT_LIMIT = 10;
 const RESULT_OPTIONS = [10, 25, 50, 100];
 
-export function ApifyEmptySearch({ query, planLimit }: { query: string; planLimit: number }) {
+export function ApifyEmptySearch({ query, country, mediaType, planLimit }: { query: string; country: string; mediaType: string; planLimit: number }) {
   const router = useRouter();
   const [maxResults, setMaxResults] = useState(RESULT_LIMIT);
   const [busy, setBusy] = useState(false);
@@ -22,7 +22,9 @@ export function ApifyEmptySearch({ query, planLimit }: { query: string; planLimi
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
           searchTerm: query,
-          maxResults,
+          country,
+          mediaType,
+          maxResults
         })
       });
       const data = await response.json().catch(() => ({}));
@@ -43,7 +45,7 @@ export function ApifyEmptySearch({ query, planLimit }: { query: string; planLimi
     <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50/60 p-8 text-center md:col-span-2 xl:col-span-3">
       <h2 className="text-xl font-black">“{query}” için kayıtlı reklam bulunamadı</h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
-        Bu arama önce AdSeeQ veritabanını kontrol eder. Yeni Meta reklamlarını Apify üzerinden getirip aynı aramaya ekleyebilirsiniz.
+        Bu arama önce AdSeeQ veritabanını kontrol eder. Yeni Meta reklamlarını seçtiğiniz ülke ve medya türüyle Apify üzerinden getirip aynı aramaya ekleyebilirsiniz.
       </p>
       <div className="mx-auto mt-5 flex max-w-sm gap-2">
         <label className="sr-only" htmlFor="apify-result-count">Getirilecek reklam adedi</label>
@@ -65,7 +67,7 @@ export function ApifyEmptySearch({ query, planLimit }: { query: string; planLimi
           {busy ? "Getiriliyor…" : planLimit === 0 ? "Planı yükselt" : "Getir"}
         </button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Apify · Plan limiti: {planLimit || "erişim yok"} reklam · Kullanılan kayıt kadar API kredisi</p>
+      <p className="mt-2 text-xs text-slate-500">Apify · {country === "ALL" ? "Tüm ülkeler" : country} · {mediaType === "ALL" ? "Tüm medya" : mediaType} · Plan limiti: {planLimit || "erişim yok"} reklam</p>
       {message && <p className={`mt-3 text-sm font-semibold ${error ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
     </div>
   );

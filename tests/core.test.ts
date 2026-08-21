@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MediaType } from "@prisma/client";
-import { normalizeApifyAd } from "../src/lib/apify";
+import { actorInput, normalizeApifyAd } from "../src/lib/apify";
 import { getFeatureLimit } from "../src/lib/plans";
 import { istemciIp, hizSiniriAsimi } from "../src/lib/rate-limit";
 import { stripePriceFor } from "../src/lib/stripe";
@@ -12,6 +12,7 @@ import sitemap from "../src/app/sitemap";
 import robots from "../src/app/robots";
 import { GET as llmsTxt } from "../src/app/llms.txt/route";
 import { homeStructuredData, serializeJsonLd } from "../src/lib/seo";
+import { isSafeMediaHostname } from "../src/lib/media-proxy";
 
 test("Apify reklamı metin, medya ve ülke alanlarıyla normalize edilir", () => {
   const ad = normalizeApifyAd({
@@ -110,4 +111,39 @@ test("ana sayfa JSON-LD verisi yazılım ve SSS şemalarını içerir", () => {
   assert.match(value, /SoftwareApplication/);
   assert.match(value, /FAQPage/);
   assert.equal(value.includes("<"), false);
+});
+
+test("medya proxy'si yerel ve özel ağ hedeflerini reddeder", () => {
+  assert.equal(isSafeMediaHostname("localhost"), false);
+  assert.equal(isSafeMediaHostname("127.0.0.1"), false);
+  assert.equal(isSafeMediaHostname("10.0.0.8"), false);
+  assert.equal(isSafeMediaHostname("192.168.1.4"), false);
+  assert.equal(isSafeMediaHostname("video.xx.fbcdn.net"), true);
+});
+
+test("Meta Apify aktörüne ülke ve video filtresi aktarılır", () => {
+  assert.deepEqual(actorInput("aiscraperdev~facebook-meta-ads-library-scraper", {
+    searchTerms: ["berber"],
+    country: "TR",
+    adActiveStatus: "ACTIVE",
+    mediaType: "VIDEO",
+    maxResults: 25,
+    scrapeAdDetails: true,
+    includeAboutPage: false,
+    maxCostUsd: 0.2
+  }), {
+    searchQueries: ["berber"],
+    countryCode: "TR",
+    adStatus: "active",
+    adType: "all",
+    mediaType: "video",
+    platform: "all",
+    maxResults: 25
+  });
+});
+
+test("Apify snake_case video alanı doğrudan video kreatifi olur", () => {
+  const ad = normalizeApifyAd({ ad_id: "video-1", page_name: "Test", ad_format: "video", video_url: "https://video.xx.fbcdn.net/test.mp4" });
+  assert.equal(ad?.mediaType, MediaType.VIDEO);
+  assert.equal(ad?.creativeUrl, "https://video.xx.fbcdn.net/test.mp4");
 });

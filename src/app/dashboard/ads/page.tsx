@@ -7,6 +7,7 @@ import { planFromUser } from "@/lib/plans";
 import { Card } from "@/components/ui/card";
 import { AdCreativeMedia } from "@/components/ad-creative-media";
 import { ApifyEmptySearch } from "@/components/ads/apify-empty-search";
+import { AD_COUNTRIES } from "@/lib/countries";
 
 export default async function AdsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
@@ -15,11 +16,15 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
   const q = resolvedSearchParams.q?.trim();
   const niche = resolvedSearchParams.niche;
   const mediaType = resolvedSearchParams.mediaType;
+  const country = resolvedSearchParams.country?.toUpperCase();
   const displayableCreativeWhere: Prisma.AdCreativeWhereInput = { url: { not: "" } };
   const where: Prisma.AdWhereInput = { creatives: { some: displayableCreativeWhere } };
   if (q) where.OR = [{ primaryText: { contains: q, mode: "insensitive" } }, { headline: { contains: q, mode: "insensitive" } }, { brandPage: { name: { contains: q, mode: "insensitive" } } }];
   if (niche) where.niche = { contains: niche, mode: "insensitive" };
   if (mediaType) where.mediaType = mediaType as any;
+  if (country && country !== "ALL") where.countries = { has: country };
+  const realAdsExist = await prisma.ad.count({ where: { externalAdId: { not: { startsWith: "demo_ad_" } } } }) > 0;
+  if (realAdsExist) where.externalAdId = { not: { startsWith: "demo_ad_" } };
   const ads = await prisma.ad.findMany({
     where,
     include: {
@@ -39,12 +44,15 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-black">Search Meta Adlibrary</h1>
-          <p className="mt-1 text-slate-500">Kazanan Meta reklamlarını keyword, niche ve medya tipine göre keşfet.</p>
+          <p className="mt-1 text-slate-500">Kazanan Meta reklamlarını anahtar kelime, ülke, niş ve medya tipine göre keşfet.</p>
         </div>
         <div className="rounded-2xl bg-white px-4 py-3 text-sm shadow-sm">Plan: <b>{plan?.name}</b> · Free ise kartlar kilitli</div>
       </div>
-      <form className="mb-5 grid gap-3 rounded-3xl bg-white p-4 shadow-soft md:grid-cols-[1fr_180px_180px_120px]">
+      <form className="mb-5 grid gap-3 rounded-3xl bg-white p-4 shadow-soft md:grid-cols-2 xl:grid-cols-[1fr_190px_170px_170px_120px]">
         <input name="q" defaultValue={q} placeholder="dog collar, skincare, greens..." className="rounded-2xl border border-slate-200 px-4 py-3" />
+        <select name="country" defaultValue={country || "ALL"} aria-label="Ülke" className="rounded-2xl border border-slate-200 px-4 py-3">
+          {AD_COUNTRIES.map(([code, label]) => <option key={code} value={code}>{label}</option>)}
+        </select>
         <select name="niche" defaultValue={niche || ""} className="rounded-2xl border border-slate-200 px-4 py-3">
           <option value="">Tüm niche</option><option>Pets</option><option>Beauty</option><option>Supplements</option><option>Household</option>
         </select>
@@ -57,7 +65,7 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
         {["Week's biggest winners", "US winners", "Dropship Ads", "Supplements", "Top Branded"].map((x) => <span key={x} className="rounded-full bg-violet-50 px-3 py-1 text-sm font-semibold text-violet-800">{x}</span>)}
       </div>
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {q && masked.length === 0 && <ApifyEmptySearch query={q} planLimit={apifyPlanLimit} />}
+        {q && masked.length === 0 && <ApifyEmptySearch query={q} country={country || "ALL"} mediaType={mediaType || "ALL"} planLimit={apifyPlanLimit} />}
         {masked.map((ad: any) => (
           <Card key={ad.id} className="relative overflow-hidden">
             {ad.isLocked && <div className="absolute inset-0 z-10 grid place-items-center bg-white/70 backdrop-blur-[2px]"><Link href="/pricing" className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white">Start now — Unlock winners</Link></div>}

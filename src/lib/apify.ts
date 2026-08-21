@@ -214,7 +214,7 @@ export async function runApifyActor(input: ApifyIngestInput) {
   }
 }
 
-function actorInput(actorId: string, input: ApifyIngestInput) {
+export function actorInput(actorId: string, input: ApifyIngestInput) {
   if (actorId === "aiscraperdev~facebook-meta-ads-library-scraper") {
     return {
       searchQueries: input.searchTerms,

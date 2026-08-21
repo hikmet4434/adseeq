@@ -6,9 +6,12 @@ import { prisma } from "@/lib/db";
 import { planFromUser } from "@/lib/plans";
 import { checkAndConsumeQuota, refundQuota } from "@/lib/quota";
 import { hizSiniriAsimi } from "@/lib/rate-limit";
+import { AD_COUNTRY_CODES } from "@/lib/countries";
 
 const schema = z.object({
   searchTerm: z.string().trim().min(2).max(100),
+  country: z.string().trim().toUpperCase().refine((value) => AD_COUNTRY_CODES.has(value)),
+  mediaType: z.enum(["ALL", "IMAGE", "VIDEO", "MEME"]),
   maxResults: z.coerce.number().int().refine((value) => [10, 25, 50, 100].includes(value))
 });
 
@@ -57,16 +60,16 @@ export async function POST(request: Request) {
       type: "meta-ads-library",
       status: "RUNNING",
       startedAt: new Date(),
-      metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, maxResults: parsed.data.maxResults }
+      metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, maxResults: parsed.data.maxResults }
     }
   });
 
   try {
     const records = await runApifyActor({
       searchTerms: [parsed.data.searchTerm],
-      country: "ALL",
+      country: parsed.data.country,
       adActiveStatus: "ACTIVE",
-      mediaType: "ALL",
+      mediaType: parsed.data.mediaType,
       maxResults: parsed.data.maxResults,
       maxCostUsd: Math.max(0.1, Math.ceil(parsed.data.maxResults * 0.004 * 10) / 10),
       scrapeAdDetails: true,
@@ -83,7 +86,7 @@ export async function POST(request: Request) {
         finishedAt: new Date(),
         recordsImported: result.imported,
         recordsFailed: result.failed,
-        metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, maxResults: parsed.data.maxResults, received: records.length }
+        metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, maxResults: parsed.data.maxResults, received: records.length }
       }
     });
     return NextResponse.json({ ok: true, ...result, received: records.length });
