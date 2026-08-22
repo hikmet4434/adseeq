@@ -111,7 +111,7 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
         {["Week's biggest winners", "US winners", "Dropship Ads", "Supplements", "Top Branded"].map((x) => <span key={x} className="rounded-full bg-violet-50 px-3 py-1 text-sm font-semibold text-violet-800">{x}</span>)}
       </div>
       <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        {q && masked.length === 0 && <ApifyEmptySearch query={q} country={country || "ALL"} mediaType={mediaType || "ALL"} matchMode={matchMode} status={status} planLimit={apifyPlanLimit} />}
+        {q && <ApifyEmptySearch query={q} country={country || "ALL"} mediaType={mediaType || "ALL"} matchMode={matchMode} status={status} planLimit={apifyPlanLimit} existingCount={masked.length} />}
         {masked.map((ad: any) => (
           <Card key={ad.id} className="relative overflow-hidden">
             {ad.isLocked && <div className="absolute inset-0 z-10 grid place-items-center bg-white/70 backdrop-blur-[2px]"><Link href="/pricing" className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white">Start now — Unlock winners</Link></div>}
