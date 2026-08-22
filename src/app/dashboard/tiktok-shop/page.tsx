@@ -28,7 +28,7 @@ export default async function TikTokShopPage({ searchParams }: { searchParams: P
   const ranked = products.map((product) => ({ ...product, score: opportunityScore(product) })).sort((a, b) => b.score - a.score);
   const regions = [...new Set(products.map((product) => product.region).filter(Boolean))] as string[];
   return <div>
-    <div className="mb-6"><h1 className="text-3xl font-black">TikTok Shop</h1><p className="mt-1 text-slate-500">Apify üzerinden canlı ürün, satış, fiyat, mağaza ve değerlendirme sinyalleri.</p></div>
+    <div className="mb-6"><h1 className="text-3xl font-black">TikTok Shop</h1><p className="mt-1 text-slate-500">Canlı ürün, satış, fiyat, mağaza ve değerlendirme sinyalleri.</p></div>
     <TikTokShopImport planLimit={planLimit} />
     <form className="mb-5 grid gap-3 rounded-3xl bg-white p-4 shadow-soft md:grid-cols-[1fr_180px_120px]">
       <input name="q" defaultValue={q} placeholder="Kayıtlı ürün veya mağaza ara" className="rounded-2xl border border-slate-200 px-4 py-3" />

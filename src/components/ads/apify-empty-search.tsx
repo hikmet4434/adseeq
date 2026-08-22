@@ -30,14 +30,14 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
         })
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error(data.error || "APIFY_INGEST_FAILED");
+      if (!response.ok) throw new Error("Canlı reklam taraması başarısız oldu.");
 
       setError(false);
       setMessage(`${data.received} aday tarandı, ${data.relevant} ilgili reklam bulundu. Sonuçlar yenileniyor…`);
       router.refresh();
     } catch (caught) {
       setError(true);
-      setMessage(caught instanceof Error ? caught.message : "Apify içe aktarması başarısız oldu.");
+      setMessage(caught instanceof Error ? caught.message : "Canlı reklam taraması başarısız oldu.");
     } finally {
       setBusy(false);
     }
@@ -48,8 +48,8 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
       <h2 className="text-xl font-black">{existingCount > 0 ? `Daha fazla “${query}” reklamı getir` : `“${query}” için kayıtlı reklam bulunamadı`}</h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
         {existingCount > 0
-          ? `Şu anda ${existingCount} ilgili reklam gösteriliyor. Yeni Meta reklamlarını aynı detaylı filtrelerle Apify üzerinden tarayabilirsiniz.`
-          : "Bu arama önce AdSeeQ veritabanını kontrol eder. Yeni Meta reklamlarını seçtiğiniz ülke ve medya türüyle Apify üzerinden getirip aynı aramaya ekleyebilirsiniz."}
+          ? `Şu anda ${existingCount} ilgili reklam gösteriliyor. Yeni Meta reklamlarını aynı detaylı filtrelerle canlı olarak tarayabilirsiniz.`
+          : "Bu arama önce AdSeeQ veritabanını kontrol eder. Yeni Meta reklamlarını seçtiğiniz ülke ve medya türüyle canlı olarak getirip aynı aramaya ekleyebilirsiniz."}
       </p>
       <div className="mx-auto mt-5 flex max-w-sm gap-2">
         <label className="sr-only" htmlFor="apify-result-count">Getirilecek reklam adedi</label>
@@ -71,7 +71,7 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
           {busy ? "Getiriliyor…" : planLimit === 0 ? "Planı yükselt" : existingCount > 0 ? "Daha fazla getir" : "Getir"}
         </button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Apify · {country === "ALL" ? "Tüm dünya" : country} · {mediaType === "ALL" ? "Tüm medya" : mediaType} · {matchMode === "EXACT_PHRASE" ? "Tam ifade" : "Tüm kelimeler"} · Plan limiti: {planLimit || "erişim yok"} reklam</p>
+      <p className="mt-2 text-xs text-slate-500">Canlı Meta verisi · {country === "ALL" ? "Tüm dünya" : country} · {mediaType === "ALL" ? "Tüm medya" : mediaType} · {matchMode === "EXACT_PHRASE" ? "Tam ifade" : "Tüm kelimeler"} · Plan limiti: {planLimit || "erişim yok"} reklam</p>
       {message && <p className={`mt-3 text-sm font-semibold ${error ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
     </div>
   );
