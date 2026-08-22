@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { currentUser } from "@/lib/auth/current-user";
-import { importApifyAds, relevantApifyRecords, runApifyActor } from "@/lib/apify";
+import { importApifyAds, normalizeApifyAd, relevantApifyRecords, runApifyActor } from "@/lib/apify";
+import { searchMetaAds } from "@/lib/meta-ads";
 import { prisma } from "@/lib/db";
 import { planFromUser } from "@/lib/plans";
 import { checkAndConsumeQuota, refundQuota } from "@/lib/quota";
@@ -58,7 +59,7 @@ export async function POST(request: Request) {
 
   const job = await prisma.ingestJob.create({
     data: {
-      source: "apify",
+      source: "meta",
       type: "meta-ads-library",
       status: "RUNNING",
       startedAt: new Date(),
@@ -67,10 +68,17 @@ export async function POST(request: Request) {
   });
 
   try {
-    // Meta bazen görsel OCR'ı veya CTA metni nedeniyle gevşek sonuçlar döndürür.
-    // İstenen sayıyı doldurabilmek için aynı maliyet tavanıyla daha geniş bir aday havuzu taranır.
+    const meta = await searchMetaAds({
+      searchTerm: parsed.data.searchTerm,
+      country: parsed.data.country,
+      adActiveStatus: parsed.data.status,
+      matchMode: parsed.data.matchMode,
+      maxResults: parsed.data.maxResults
+    });
+    // Meta Ad Library ham medya dosyası vermez. Doğrulanan reklamların görsel/video
+    // dosyaları mevcut medya katmanından tamamlanır; Meta token'ı istemciye çıkmaz.
     const candidateLimit = Math.min(parsed.data.maxResults * 3, 300);
-    const records = await runApifyActor({
+    const mediaRecords = await runApifyActor({
       searchTerms: [parsed.data.searchTerm],
       country: parsed.data.country,
       adActiveStatus: parsed.data.status,
@@ -80,27 +88,34 @@ export async function POST(request: Request) {
       scrapeAdDetails: true,
       includeAboutPage: false
     });
-    const relevantRecords = relevantApifyRecords(records, parsed.data.searchTerm, parsed.data.matchMode, parsed.data.maxResults);
-    const result = await importApifyAds(relevantRecords);
-    if (creditsReserved && relevantRecords.length < parsed.data.maxResults) {
-      await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults - relevantRecords.length });
+    const officialIds = new Set(meta.relevant.map((record) => String(record.adArchiveID || "")));
+    const relevantMediaRecords = relevantApifyRecords(mediaRecords, parsed.data.searchTerm, parsed.data.matchMode, parsed.data.maxResults)
+      .filter((record) => {
+        const normalized = normalizeApifyAd(record);
+        return normalized ? officialIds.has(normalized.externalAdId) : false;
+      });
+    const officialResult = await importApifyAds(meta.relevant);
+    const mediaResult = await importApifyAds(relevantMediaRecords);
+    const delivered = Math.min(meta.relevant.length, relevantMediaRecords.length);
+    if (creditsReserved && delivered < parsed.data.maxResults) {
+      await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults - delivered });
     }
     await prisma.ingestJob.update({
       where: { id: job.id },
       data: {
         status: "COMPLETED",
         finishedAt: new Date(),
-        recordsImported: result.imported,
-        recordsFailed: result.failed,
-        metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, matchMode: parsed.data.matchMode, status: parsed.data.status, maxResults: parsed.data.maxResults, received: records.length, relevant: relevantRecords.length }
+        recordsImported: mediaResult.imported,
+        recordsFailed: officialResult.failed + mediaResult.failed,
+        metadata: { userId: user.id, provider: "meta", searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, matchMode: parsed.data.matchMode, status: parsed.data.status, maxResults: parsed.data.maxResults, received: meta.received, relevant: meta.relevant.length, mediaEnriched: mediaResult.imported }
       }
     });
-    return NextResponse.json({ ok: true, ...result, received: records.length, relevant: relevantRecords.length });
+    return NextResponse.json({ ok: true, provider: "meta", imported: mediaResult.imported, failed: officialResult.failed + mediaResult.failed, received: meta.received, relevant: meta.relevant.length, mediaEnriched: mediaResult.imported });
   } catch (error) {
     if (dailyReserved) await refundQuota({ userId: user.id, metric: "ads_search_daily" });
     if (creditsReserved) await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults });
-    const code = error instanceof Error && /^APIFY_[A-Z0-9_]+$/.test(error.message) ? error.message : "APIFY_INGEST_FAILED";
+    const code = error instanceof Error && /^(META|APIFY)_[A-Z0-9_]+$/.test(error.message) ? error.message : "META_INGEST_FAILED";
     await prisma.ingestJob.update({ where: { id: job.id }, data: { status: "FAILED", finishedAt: new Date(), errorMessage: code } });
-    return NextResponse.json({ error: code }, { status: code === "APIFY_NOT_CONFIGURED" ? 503 : 502 });
+    return NextResponse.json({ error: code }, { status: code.endsWith("NOT_CONFIGURED") ? 503 : 502 });
   }
 }

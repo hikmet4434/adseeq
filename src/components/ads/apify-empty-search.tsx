@@ -33,7 +33,7 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
       if (!response.ok) throw new Error("Canlı reklam taraması başarısız oldu.");
 
       setError(false);
-      setMessage(`${data.received} aday tarandı, ${data.relevant} ilgili reklam bulundu. Sonuçlar yenileniyor…`);
+      setMessage(`Meta'da ${data.received} aday tarandı, ${data.relevant} ilgili reklam bulundu; ${data.mediaEnriched ?? data.imported ?? 0} reklamın medyası hazırlandı. Sonuçlar yenileniyor…`);
       router.refresh();
     } catch (caught) {
       setError(true);
