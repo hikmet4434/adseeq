@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MediaType } from "@prisma/client";
 import { actorInput, normalizeApifyAd } from "../src/lib/apify";
+import { adSearchRelevance, filterRelevantAds } from "../src/lib/ad-search";
 import { getFeatureLimit } from "../src/lib/plans";
 import { istemciIp, hizSiniriAsimi } from "../src/lib/rate-limit";
 import { stripePriceFor } from "../src/lib/stripe";
@@ -146,4 +147,21 @@ test("Apify snake_case video alanı doğrudan video kreatifi olur", () => {
   const ad = normalizeApifyAd({ ad_id: "video-1", page_name: "Test", ad_format: "video", video_url: "https://video.xx.fbcdn.net/test.mp4" });
   assert.equal(ad?.mediaType, MediaType.VIDEO);
   assert.equal(ad?.creativeUrl, "https://video.xx.fbcdn.net/test.mp4");
+});
+
+test("reklam araması tam kelimeyi eşleştirir ve alakasız alt dizeleri dışarıda bırakır", () => {
+  assert.ok(adSearchRelevance({ headline: "Translate every conversation" }, "translate", "ALL_WORDS") > 0);
+  assert.equal(adSearchRelevance({ headline: "A translated guide" }, "translate", "ALL_WORDS"), 0);
+  assert.equal(adSearchRelevance({ primaryText: "Unrelated summer sale" }, "translate", "ALL_WORDS"), 0);
+});
+
+test("arama sonuçları ilgililiğe göre sıralanıp istenen sayıda kesilir", () => {
+  const ads = [
+    { headline: null, primaryText: "Use translate today", brandName: "Other" },
+    { headline: "Translate instantly", primaryText: "Use translate today", brandName: "Translate Pro" },
+    { headline: "Unrelated", primaryText: "No matching word", brandName: "Other" }
+  ];
+  const result = filterRelevantAds(ads, "translate", "ALL_WORDS", 1);
+  assert.equal(result.length, 1);
+  assert.equal(result[0].headline, "Translate instantly");
 });

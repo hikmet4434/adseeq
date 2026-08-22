@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 const RESULT_LIMIT = 10;
 const RESULT_OPTIONS = [10, 25, 50, 100];
 
-export function ApifyEmptySearch({ query, country, mediaType, planLimit }: { query: string; country: string; mediaType: string; planLimit: number }) {
+export function ApifyEmptySearch({ query, country, mediaType, matchMode, status, planLimit }: { query: string; country: string; mediaType: string; matchMode: "ALL_WORDS" | "EXACT_PHRASE"; status: "ACTIVE" | "INACTIVE" | "ALL"; planLimit: number }) {
   const router = useRouter();
   const [maxResults, setMaxResults] = useState(RESULT_LIMIT);
   const [busy, setBusy] = useState(false);
@@ -24,6 +24,8 @@ export function ApifyEmptySearch({ query, country, mediaType, planLimit }: { que
           searchTerm: query,
           country,
           mediaType,
+          matchMode,
+          status,
           maxResults
         })
       });
@@ -31,7 +33,7 @@ export function ApifyEmptySearch({ query, country, mediaType, planLimit }: { que
       if (!response.ok) throw new Error(data.error || "APIFY_INGEST_FAILED");
 
       setError(false);
-      setMessage(`${data.imported} reklam işlendi. Sonuçlar yenileniyor…`);
+      setMessage(`${data.received} aday tarandı, ${data.relevant} ilgili reklam bulundu. Sonuçlar yenileniyor…`);
       router.refresh();
     } catch (caught) {
       setError(true);
@@ -67,7 +69,7 @@ export function ApifyEmptySearch({ query, country, mediaType, planLimit }: { que
           {busy ? "Getiriliyor…" : planLimit === 0 ? "Planı yükselt" : "Getir"}
         </button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Apify · {country === "ALL" ? "Tüm ülkeler" : country} · {mediaType === "ALL" ? "Tüm medya" : mediaType} · Plan limiti: {planLimit || "erişim yok"} reklam</p>
+      <p className="mt-2 text-xs text-slate-500">Apify · {country === "ALL" ? "Tüm dünya" : country} · {mediaType === "ALL" ? "Tüm medya" : mediaType} · {matchMode === "EXACT_PHRASE" ? "Tam ifade" : "Tüm kelimeler"} · Plan limiti: {planLimit || "erişim yok"} reklam</p>
       {message && <p className={`mt-3 text-sm font-semibold ${error ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
     </div>
   );

@@ -1,5 +1,6 @@
 import { AdSource, AdStatus, MediaType, Prisma } from "@prisma/client";
 import { prisma } from "@/lib/db";
+import { AdSearchMatchMode, filterRelevantAds } from "@/lib/ad-search";
 
 const APIFY_API_BASE = "https://api.apify.com/v2";
 const DEFAULT_ACTOR_ID = "aiscraperdev~facebook-meta-ads-library-scraper";
@@ -237,6 +238,21 @@ export function actorInput(actorId: string, input: ApifyIngestInput) {
     scrapeAdDetails: input.scrapeAdDetails,
     includeAboutPage: input.includeAboutPage
   };
+}
+
+export function relevantApifyRecords(records: JsonRecord[], query: string, mode: AdSearchMatchMode, limit: number) {
+  const normalized = records.flatMap((record) => {
+    const ad = normalizeApifyAd(record);
+    return ad ? [{
+      record,
+      primaryText: ad.primaryText,
+      headline: ad.headline,
+      description: ad.description,
+      ctaText: ad.ctaText,
+      brandName: ad.pageName
+    }] : [];
+  });
+  return filterRelevantAds(normalized, query, mode, limit).map((item) => item.record);
 }
 
 export async function importApifyAds(records: JsonRecord[]) {

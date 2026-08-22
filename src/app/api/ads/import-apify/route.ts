@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { currentUser } from "@/lib/auth/current-user";
-import { importApifyAds, runApifyActor } from "@/lib/apify";
+import { importApifyAds, relevantApifyRecords, runApifyActor } from "@/lib/apify";
 import { prisma } from "@/lib/db";
 import { planFromUser } from "@/lib/plans";
 import { checkAndConsumeQuota, refundQuota } from "@/lib/quota";
@@ -12,6 +12,8 @@ const schema = z.object({
   searchTerm: z.string().trim().min(2).max(100),
   country: z.string().trim().toUpperCase().refine((value) => AD_COUNTRY_CODES.has(value)),
   mediaType: z.enum(["ALL", "IMAGE", "VIDEO", "MEME"]),
+  matchMode: z.enum(["ALL_WORDS", "EXACT_PHRASE"]).default("ALL_WORDS"),
+  status: z.enum(["ACTIVE", "INACTIVE", "ALL"]).default("ACTIVE"),
   maxResults: z.coerce.number().int().refine((value) => [10, 25, 50, 100].includes(value))
 });
 
@@ -60,24 +62,28 @@ export async function POST(request: Request) {
       type: "meta-ads-library",
       status: "RUNNING",
       startedAt: new Date(),
-      metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, maxResults: parsed.data.maxResults }
+      metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, matchMode: parsed.data.matchMode, status: parsed.data.status, maxResults: parsed.data.maxResults }
     }
   });
 
   try {
+    // Meta bazen görsel OCR'ı veya CTA metni nedeniyle gevşek sonuçlar döndürür.
+    // İstenen sayıyı doldurabilmek için aynı maliyet tavanıyla daha geniş bir aday havuzu taranır.
+    const candidateLimit = Math.min(parsed.data.maxResults * 3, 300);
     const records = await runApifyActor({
       searchTerms: [parsed.data.searchTerm],
       country: parsed.data.country,
-      adActiveStatus: "ACTIVE",
+      adActiveStatus: parsed.data.status,
       mediaType: parsed.data.mediaType,
-      maxResults: parsed.data.maxResults,
+      maxResults: candidateLimit,
       maxCostUsd: Math.max(0.1, Math.ceil(parsed.data.maxResults * 0.004 * 10) / 10),
       scrapeAdDetails: true,
       includeAboutPage: false
     });
-    const result = await importApifyAds(records);
-    if (creditsReserved && records.length < parsed.data.maxResults) {
-      await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults - records.length });
+    const relevantRecords = relevantApifyRecords(records, parsed.data.searchTerm, parsed.data.matchMode, parsed.data.maxResults);
+    const result = await importApifyAds(relevantRecords);
+    if (creditsReserved && relevantRecords.length < parsed.data.maxResults) {
+      await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults - relevantRecords.length });
     }
     await prisma.ingestJob.update({
       where: { id: job.id },
@@ -86,10 +92,10 @@ export async function POST(request: Request) {
         finishedAt: new Date(),
         recordsImported: result.imported,
         recordsFailed: result.failed,
-        metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, maxResults: parsed.data.maxResults, received: records.length }
+        metadata: { userId: user.id, searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, matchMode: parsed.data.matchMode, status: parsed.data.status, maxResults: parsed.data.maxResults, received: records.length, relevant: relevantRecords.length }
       }
     });
-    return NextResponse.json({ ok: true, ...result, received: records.length });
+    return NextResponse.json({ ok: true, ...result, received: records.length, relevant: relevantRecords.length });
   } catch (error) {
     if (dailyReserved) await refundQuota({ userId: user.id, metric: "ads_search_daily" });
     if (creditsReserved) await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults });
