@@ -255,6 +255,39 @@ export function relevantApifyRecords(records: JsonRecord[], query: string, mode:
   return filterRelevantAds(normalized, query, mode, limit).map((item) => item.record);
 }
 
+function requestedMediaMatches(mediaType: MediaType, requested: ApifyIngestInput["mediaType"]) {
+  if (requested === "ALL" || requested === "NONE") return mediaType !== MediaType.UNKNOWN;
+  if (requested === "VIDEO") return mediaType === MediaType.VIDEO;
+  if (requested === "IMAGE" || requested === "MEME") return mediaType === MediaType.IMAGE;
+  return false;
+}
+
+export function selectMediaRecordsForSearch(
+  records: JsonRecord[],
+  officialRecords: JsonRecord[],
+  query: string,
+  mode: AdSearchMatchMode,
+  mediaType: ApifyIngestInput["mediaType"],
+  limit: number
+) {
+  const officialIds = new Set(officialRecords.map((record) => String(record.adArchiveID || "")).filter(Boolean));
+  const seen = new Set<string>();
+  const candidates = relevantApifyRecords(records, query, mode, Math.max(records.length, limit)).flatMap((record) => {
+    const normalized = normalizeApifyAd(record);
+    if (!normalized?.creativeUrl || !requestedMediaMatches(normalized.mediaType, mediaType) || seen.has(normalized.externalAdId)) return [];
+    seen.add(normalized.externalAdId);
+    return [{ record, externalAdId: normalized.externalAdId }];
+  });
+  const official = candidates.filter((candidate) => officialIds.has(candidate.externalAdId));
+  const fallback = candidates.filter((candidate) => !officialIds.has(candidate.externalAdId));
+  const selected = [...official, ...fallback].slice(0, limit);
+  return {
+    records: selected.map((candidate) => candidate.record),
+    officialMatches: Math.min(official.length, limit),
+    fallbackMatches: Math.max(0, selected.length - Math.min(official.length, limit))
+  };
+}
+
 export async function importApifyAds(records: JsonRecord[]) {
   let imported = 0;
   let failed = 0;

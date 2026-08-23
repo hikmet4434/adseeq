@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 const RESULT_LIMIT = 10;
@@ -12,6 +12,14 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState(false);
+  const [waitSeconds, setWaitSeconds] = useState(0);
+
+  useEffect(() => {
+    if (!busy) { setWaitSeconds(0); return; }
+    const startedAt = Date.now();
+    const interval = window.setInterval(() => setWaitSeconds(Math.floor((Date.now() - startedAt) / 1000)), 1000);
+    return () => window.clearInterval(interval);
+  }, [busy]);
 
   async function importFromApify() {
     setBusy(true);
@@ -33,7 +41,10 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
       if (!response.ok) throw new Error("Canlı reklam taraması başarısız oldu.");
 
       setError(false);
-      setMessage(`Meta'da ${data.received} aday tarandı, ${data.relevant} ilgili reklam bulundu; ${data.mediaEnriched ?? data.imported ?? 0} reklamın medyası hazırlandı. Sonuçlar yenileniyor…`);
+      const prepared = data.mediaEnriched ?? data.imported ?? 0;
+      setMessage(prepared > 0
+        ? `Meta'da ${data.received} aday tarandı, ${data.relevant} ilgili reklam bulundu; ${prepared} reklamın medyası hazırlandı. Sonuçlar yenileniyor…`
+        : `Meta'da ${data.received} aday ve ${data.relevant} ilgili reklam bulundu; seçili ${mediaType === "ALL" ? "medya" : mediaType.toLocaleLowerCase("tr-TR")} türünde kullanılabilir kreatif bulunamadı.`);
       router.refresh();
     } catch (caught) {
       setError(true);
@@ -68,10 +79,11 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
           onClick={importFromApify}
           className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white disabled:cursor-wait disabled:opacity-50"
         >
-          {busy ? "Getiriliyor…" : planLimit === 0 ? "Planı yükselt" : existingCount > 0 ? "Daha fazla getir" : "Getir"}
+          {busy ? (waitSeconds >= 8 ? "Videolar hazırlanıyor…" : "Meta taranıyor…") : planLimit === 0 ? "Planı yükselt" : existingCount > 0 ? "Daha fazla getir" : "Getir"}
         </button>
       </div>
       <p className="mt-2 text-xs text-slate-500">Canlı Meta verisi · {country === "ALL" ? "Tüm dünya" : country} · {mediaType === "ALL" ? "Tüm medya" : mediaType} · {matchMode === "EXACT_PHRASE" ? "Tam ifade" : "Tüm kelimeler"} · Plan limiti: {planLimit || "erişim yok"} reklam</p>
+      {busy && <p className="mt-2 text-xs font-semibold text-violet-700">Meta sonuçları ve gerçek video/görseller hazırlanıyor. Bu işlem genellikle 15–60 saniye sürer.</p>}
       {message && <p className={`mt-3 text-sm font-semibold ${error ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
     </div>
   );

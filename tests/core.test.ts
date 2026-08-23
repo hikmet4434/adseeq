@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { MediaType } from "@prisma/client";
-import { actorInput, normalizeApifyAd } from "../src/lib/apify";
+import { actorInput, normalizeApifyAd, selectMediaRecordsForSearch } from "../src/lib/apify";
 import { adSearchRelevance, filterRelevantAds } from "../src/lib/ad-search";
 import { getFeatureLimit } from "../src/lib/plans";
 import { istemciIp, hizSiniriAsimi } from "../src/lib/rate-limit";
@@ -164,4 +164,16 @@ test("arama sonuçları ilgililiğe göre sıralanıp istenen sayıda kesilir", 
   const result = filterRelevantAds(ads, "translate", "ALL_WORDS", 1);
   assert.equal(result.length, 1);
   assert.equal(result[0].headline, "Translate instantly");
+});
+
+test("Meta medya seçimi resmi kimliği önceler ve ilgili medya yedeğini sıfıra düşürmez", () => {
+  const mediaRecords = [
+    { ad_id: "fallback-1", ad_body_text: "Anında çeviri yap", ad_format: "video", video_url: "https://video.xx.fbcdn.net/fallback.mp4", page_name: "Çeviri" },
+    { ad_id: "official-1", ad_body_text: "Çeviri uygulaması", ad_format: "video", video_url: "https://video.xx.fbcdn.net/official.mp4", page_name: "Dil" },
+    { ad_id: "image-1", ad_body_text: "Çeviri uygulaması", ad_format: "image", image_url: "https://scontent.xx.fbcdn.net/image.jpg", page_name: "Dil" }
+  ];
+  const selection = selectMediaRecordsForSearch(mediaRecords, [{ adArchiveID: "official-1" }], "çeviri", "ALL_WORDS", "VIDEO", 2);
+  assert.deepEqual(selection.records.map((record) => record.ad_id), ["official-1", "fallback-1"]);
+  assert.equal(selection.officialMatches, 1);
+  assert.equal(selection.fallbackMatches, 1);
 });

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { currentUser } from "@/lib/auth/current-user";
-import { importApifyAds, normalizeApifyAd, relevantApifyRecords, runApifyActor } from "@/lib/apify";
+import { importApifyAds, runApifyActor, selectMediaRecordsForSearch } from "@/lib/apify";
 import { searchMetaAds } from "@/lib/meta-ads";
 import { prisma } from "@/lib/db";
 import { planFromUser } from "@/lib/plans";
@@ -68,35 +68,40 @@ export async function POST(request: Request) {
   });
 
   try {
-    const meta = await searchMetaAds({
-      searchTerm: parsed.data.searchTerm,
-      country: parsed.data.country,
-      adActiveStatus: parsed.data.status,
-      matchMode: parsed.data.matchMode,
-      maxResults: parsed.data.maxResults
-    });
     // Meta Ad Library ham medya dosyası vermez. Doğrulanan reklamların görsel/video
-    // dosyaları mevcut medya katmanından tamamlanır; Meta token'ı istemciye çıkmaz.
-    const candidateLimit = Math.min(parsed.data.maxResults * 3, 300);
-    const mediaRecords = await runApifyActor({
-      searchTerms: [parsed.data.searchTerm],
-      country: parsed.data.country,
-      adActiveStatus: parsed.data.status,
-      mediaType: parsed.data.mediaType,
-      maxResults: candidateLimit,
-      maxCostUsd: Math.max(0.1, Math.ceil(parsed.data.maxResults * 0.004 * 10) / 10),
-      scrapeAdDetails: true,
-      includeAboutPage: false
-    });
-    const officialIds = new Set(meta.relevant.map((record) => String(record.adArchiveID || "")));
-    const relevantMediaRecords = relevantApifyRecords(mediaRecords, parsed.data.searchTerm, parsed.data.matchMode, parsed.data.maxResults)
-      .filter((record) => {
-        const normalized = normalizeApifyAd(record);
-        return normalized ? officialIds.has(normalized.externalAdId) : false;
-      });
+    // dosyaları aynı Meta Ads Library sorgusunun medya katmanından tamamlanır.
+    // İki uzak çağrı paralel çalışır; resmi kimlik eşleşmeleri önceliklidir, ancak
+    // farklı sayfalama nedeniyle kimliği kesişmeyen ilgili medya sonuçları atılmaz.
+    const [meta, mediaRecords] = await Promise.all([
+      searchMetaAds({
+        searchTerm: parsed.data.searchTerm,
+        country: parsed.data.country,
+        adActiveStatus: parsed.data.status,
+        matchMode: parsed.data.matchMode,
+        maxResults: parsed.data.maxResults
+      }),
+      runApifyActor({
+        searchTerms: [parsed.data.searchTerm],
+        country: parsed.data.country,
+        adActiveStatus: parsed.data.status,
+        mediaType: parsed.data.mediaType,
+        maxResults: parsed.data.maxResults,
+        maxCostUsd: Math.max(0.1, Math.ceil(parsed.data.maxResults * 0.004 * 10) / 10),
+        scrapeAdDetails: true,
+        includeAboutPage: false
+      })
+    ]);
+    const mediaSelection = selectMediaRecordsForSearch(
+      mediaRecords,
+      meta.relevant,
+      parsed.data.searchTerm,
+      parsed.data.matchMode,
+      parsed.data.mediaType,
+      parsed.data.maxResults
+    );
     const officialResult = await importApifyAds(meta.relevant);
-    const mediaResult = await importApifyAds(relevantMediaRecords);
-    const delivered = Math.min(meta.relevant.length, relevantMediaRecords.length);
+    const mediaResult = await importApifyAds(mediaSelection.records);
+    const delivered = Math.min(parsed.data.maxResults, mediaResult.imported);
     if (creditsReserved && delivered < parsed.data.maxResults) {
       await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults - delivered });
     }
@@ -107,10 +112,10 @@ export async function POST(request: Request) {
         finishedAt: new Date(),
         recordsImported: mediaResult.imported,
         recordsFailed: officialResult.failed + mediaResult.failed,
-        metadata: { userId: user.id, provider: "meta", searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, matchMode: parsed.data.matchMode, status: parsed.data.status, maxResults: parsed.data.maxResults, received: meta.received, relevant: meta.relevant.length, mediaEnriched: mediaResult.imported }
+        metadata: { userId: user.id, provider: "meta", searchTerm: parsed.data.searchTerm, country: parsed.data.country, mediaType: parsed.data.mediaType, matchMode: parsed.data.matchMode, status: parsed.data.status, maxResults: parsed.data.maxResults, received: meta.received, relevant: meta.relevant.length, mediaCandidates: mediaRecords.length, officialMediaMatches: mediaSelection.officialMatches, fallbackMediaMatches: mediaSelection.fallbackMatches, mediaEnriched: mediaResult.imported }
       }
     });
-    return NextResponse.json({ ok: true, provider: "meta", imported: mediaResult.imported, failed: officialResult.failed + mediaResult.failed, received: meta.received, relevant: meta.relevant.length, mediaEnriched: mediaResult.imported });
+    return NextResponse.json({ ok: true, provider: "meta", imported: mediaResult.imported, failed: officialResult.failed + mediaResult.failed, received: meta.received, relevant: meta.relevant.length, mediaCandidates: mediaRecords.length, mediaEnriched: mediaResult.imported });
   } catch (error) {
     if (dailyReserved) await refundQuota({ userId: user.id, metric: "ads_search_daily" });
     if (creditsReserved) await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: parsed.data.maxResults });
