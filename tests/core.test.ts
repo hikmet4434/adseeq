@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import { MediaType } from "@prisma/client";
 import { actorInput, normalizeApifyAd, selectMediaRecordsForSearch } from "../src/lib/apify";
-import { adSearchRelevance, filterRelevantAds } from "../src/lib/ad-search";
+import { adSearchDatabaseTerms, adSearchRelevance, filterRelevantAds } from "../src/lib/ad-search";
 import { getFeatureLimit } from "../src/lib/plans";
 import { istemciIp, hizSiniriAsimi } from "../src/lib/rate-limit";
 import { stripePriceFor } from "../src/lib/stripe";
@@ -153,6 +153,11 @@ test("reklam araması tam kelimeyi eşleştirir ve alakasız alt dizeleri dışa
   assert.ok(adSearchRelevance({ headline: "Translate every conversation" }, "translate", "ALL_WORDS") > 0);
   assert.equal(adSearchRelevance({ headline: "A translated guide" }, "translate", "ALL_WORDS"), 0);
   assert.equal(adSearchRelevance({ primaryText: "Unrelated summer sale" }, "translate", "ALL_WORDS"), 0);
+});
+
+test("veritabanı araması Türkçe karakterli ve ASCII yazımları birlikte tarar", () => {
+  assert.deepEqual(adSearchDatabaseTerms("çeviri", "ALL_WORDS"), [["çeviri", "ceviri"]]);
+  assert.deepEqual(adSearchDatabaseTerms("hızlı çeviri", "EXACT_PHRASE"), [["hızlı çeviri", "hızlı ceviri"]]);
 });
 
 test("arama sonuçları ilgililiğe göre sıralanıp istenen sayıda kesilir", () => {

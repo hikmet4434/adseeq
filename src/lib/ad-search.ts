@@ -22,6 +22,25 @@ export function adSearchTokens(query: string) {
   return [...new Set(normalizeAdSearchText(query).split(" ").filter(Boolean))];
 }
 
+function preserveAdSearchText(value: string | null | undefined) {
+  return (value || "")
+    .normalize("NFKC")
+    .toLocaleLowerCase("tr-TR")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+export function adSearchDatabaseTerms(query: string, mode: AdSearchMatchMode) {
+  const preserved = preserveAdSearchText(query);
+  const ascii = normalizeAdSearchText(query);
+  if (mode === "EXACT_PHRASE") return [[...new Set([preserved, ascii].filter(Boolean))]];
+
+  const preservedTokens = preserved.split(" ").filter(Boolean);
+  const asciiTokens = ascii.split(" ").filter(Boolean);
+  return asciiTokens.map((token, index) => [...new Set([preservedTokens[index], token].filter(Boolean))]);
+}
+
 function containsPhrase(text: string, phrase: string) {
   return Boolean(text && phrase && ` ${text} `.includes(` ${phrase} `));
 }

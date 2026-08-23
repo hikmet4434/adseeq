@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/card";
 import { AdCreativeMedia } from "@/components/ad-creative-media";
 import { ApifyEmptySearch } from "@/components/ads/apify-empty-search";
 import { AD_COUNTRIES } from "@/lib/countries";
-import { AdSearchMatchMode, adSearchRelevance, adSearchTokens } from "@/lib/ad-search";
+import { AdSearchMatchMode, adSearchDatabaseTerms, adSearchRelevance } from "@/lib/ad-search";
 
 export default async function AdsPage({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
   const user = await requireUser();
@@ -26,13 +26,13 @@ export default async function AdsPage({ searchParams }: { searchParams: Promise<
   const displayableCreativeWhere: Prisma.AdCreativeWhereInput = { url: { not: "" } };
   const where: Prisma.AdWhereInput = { creatives: { some: displayableCreativeWhere } };
   if (q) {
-    const terms = matchMode === "EXACT_PHRASE" ? [q] : adSearchTokens(q);
-    where.AND = terms.map((term) => ({ OR: [
-      { primaryText: { contains: term, mode: "insensitive" } },
-      { headline: { contains: term, mode: "insensitive" } },
-      { description: { contains: term, mode: "insensitive" } },
-      { brandPage: { name: { contains: term, mode: "insensitive" } } }
-    ] }));
+    const terms = adSearchDatabaseTerms(q, matchMode);
+    where.AND = terms.map((variants) => ({ OR: variants.flatMap((term) => [
+      { primaryText: { contains: term, mode: "insensitive" as const } },
+      { headline: { contains: term, mode: "insensitive" as const } },
+      { description: { contains: term, mode: "insensitive" as const } },
+      { brandPage: { name: { contains: term, mode: "insensitive" as const } } }
+    ]) }));
   }
   if (niche) where.niche = { contains: niche, mode: "insensitive" };
   if (mediaType) where.mediaType = mediaType as any;
