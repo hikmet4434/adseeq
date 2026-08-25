@@ -4,14 +4,23 @@ import { AdCreativeMedia } from "@/components/ad-creative-media";
 import { MagicAiRunner } from "@/components/magic-ai-runner";
 import { useT } from "@/lib/i18n";
 
-export function MagicAiClient({ q, ads, analyses, sentence, recommendation }: {
+export function MagicAiClient({ q, ads, analyses }: {
   q: string | undefined;
   ads: any[];
   analyses: any[];
-  sentence: (value?: string | null) => string;
-  recommendation: (ad: any) => { label: string; color: string; text: string };
 }) {
   const t = useT();
+  const sentence = (value?: string | null) => {
+    return value?.split(/[.!?\n]/).map((item) => item.trim()).find(Boolean) || t("ai.noHook");
+  };
+  const recommendation = (ad: { daysRunning: number | null; mediaType: string; primaryText: string | null; status: string }) => {
+    const days = ad.daysRunning || 0;
+    if (ad.status === "INACTIVE") return { label: t("ai.labelArchive"), color: "bg-slate-100 text-slate-700", text: t("ai.recArchive") };
+    if (days >= 30) return { label: t("ai.labelScale"), color: "bg-emerald-50 text-emerald-700", text: t("ai.recScale", { days, media: ad.mediaType.toLowerCase() }) };
+    if (days >= 14) return { label: t("ai.labelVariation"), color: "bg-violet-50 text-violet-700", text: t("ai.recVariation") };
+    return { label: t("ai.labelWatch"), color: "bg-amber-50 text-amber-700", text: t("ai.recWatch") };
+  };
+  void q;
   return (
     <div>
       <div className="mb-6"><h1 className="text-3xl font-black">{t("ai.magic")}</h1><p className="mt-1 text-slate-500">{t("ai.description")}</p></div>
