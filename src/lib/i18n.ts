@@ -1,0 +1,394 @@
+"use client";
+import { useLang, type Lang } from "@/lib/use-lang";
+
+/**
+ * Basit anahtar-bazlı çeviri sözlüğü.
+ * Yeni metin eklerken: hem tr hem en doldur — fallback yoksa key görünür.
+ *
+ * Kullanım:
+ *   const t = useT();
+ *   <h1>{t("landing.title")}</h1>
+ */
+
+type Dict = Record<string, { tr: string; en: string }>;
+
+const DICT: Dict = {
+  // ─── Brand & Navigation ───
+  "brand.appName": { tr: "AdSeeQ", en: "AdSeeQ" },
+  "brand.tagline": { tr: "Reklam ve Trend Zekâsı", en: "Ad & Trend Intelligence" },
+  "nav.home": { tr: "Ana Sayfa", en: "Home" },
+  "nav.login": { tr: "Giriş", en: "Sign In" },
+  "nav.register": { tr: "Kayıt Ol", en: "Sign Up" },
+  "nav.pricing": { tr: "Planlar", en: "Pricing" },
+  "nav.dashboard": { tr: "Panel", en: "Dashboard" },
+  "nav.ads": { tr: "Reklamlar", en: "Ads" },
+  "nav.trends": { tr: "Trendler", en: "Trends" },
+  "nav.tracker": { tr: "Takip", en: "Tracker" },
+  "nav.admin": { tr: "Yönetim", en: "Admin" },
+  "nav.language": { tr: "Dil", en: "Language" },
+  "nav.menu": { tr: "Menü", en: "Menu" },
+  "nav.close": { tr: "Kapat", en: "Close" },
+  "nav.upgrade": { tr: "Yükselt", en: "Upgrade" },
+
+  // ─── Hero Section ───
+  "landing.hero.badge": { tr: "Meta Ads + TikTok Shop + AI Trend Intelligence", en: "Meta Ads + TikTok Shop + AI Trend Intelligence" },
+  "landing.hero.title": { tr: "Kazanan reklamları ve mağazaları dakikalar içinde keşfet.", en: "Discover winning ads and stores in minutes." },
+  "landing.hero.description": { tr: "AdSeeQ, reklam ve e-ticaret araştırmalarını tek panelde birleştiren reklam zekâsı platformudur. Meta Ads Library reklamlarını araştırın, TikTok Shop ürünlerini keşfedin, Magic AI ile trend sinyallerini analiz edin ve rakip markaları takip edin.", en: "AdSeeQ is an ad intelligence platform that combines ad and ecommerce research in a single panel. Research Meta Ads Library ads, discover TikTok Shop products, analyze trend signals with Magic AI, and track competitor brands." },
+  "landing.hero.cta.primary": { tr: "Ücretsiz başla", en: "Start free" },
+  "landing.hero.cta.secondary": { tr: "Panele git", en: "Go to dashboard" },
+
+  // ─── Features Section ───
+  "landing.features.subtitle": { tr: "Tek panel, altı araştırma aracı", en: "Single panel, six research tools" },
+  "landing.features.title": { tr: "Reklamdan trende, araştırma akışınız tek yerde", en: "From ad to trend, your research flow in one place" },
+  "landing.features.description": { tr: "Kreatifleri bulun, sinyalleri karşılaştırın ve incelemek istediğiniz reklam, mağaza ve markaları kaydedin.", en: "Find creatives, compare signals, and save the ads, stores, and brands you want to analyze." },
+  
+  "feature.meta.title": { tr: "Meta reklam araştırması", en: "Meta ad research" },
+  "feature.meta.description": { tr: "Anahtar kelime ve ülkeye göre medya içeren reklam kreatiflerini araştırın.", en: "Research ad creatives with media by keyword and country." },
+  
+  "feature.tiktok.title": { tr: "TikTok Shop keşfi", en: "TikTok Shop discovery" },
+  "feature.tiktok.description": { tr: "Ürünleri ve mağaza sinyallerini aynı araştırma akışında inceleyin.", en: "Analyze products and store signals in the same research flow." },
+  
+  "feature.ai.title": { tr: "Magic AI", en: "Magic AI" },
+  "feature.ai.description": { tr: "Kreatif açıları, hedef kitle fikirleri ve test edilebilir yaklaşımlar üretin.", en: "Generate creative angles, audience ideas, and testable approaches." },
+  
+  "feature.trends.title": { tr: "Trends", en: "Trends" },
+  "feature.trends.description": { tr: "Yükselen reklam ve ürün sinyallerini düzenli bir görünümde takip edin.", en: "Track rising ad and product signals in an organized view." },
+  
+  "feature.brand.title": { tr: "Brand Tracker", en: "Brand Tracker" },
+  "feature.brand.description": { tr: "Rakip markaları kaydedin ve yeni hareketlerini tek listeden izleyin.", en: "Save competitor brands and track their latest moves from a single list." },
+  
+  "feature.store.title": { tr: "Store Tracker", en: "Store Tracker" },
+  "feature.store.description": { tr: "Mağazaları takip edin, benzer mağazaları ve ürün sinyallerini keşfedin.", en: "Track stores and discover similar stores and product signals." },
+
+  // ─── FAQ Section ───
+  "faq.subtitle": { tr: "Sık sorulan sorular", en: "Frequently asked questions" },
+  "faq.title": { tr: "AdSeeQ hakkında", en: "About AdSeeQ" },
+  "faq.1.q": { tr: "AdSeeQ nedir?", en: "What is AdSeeQ?" },
+  "faq.1.a": { tr: "AdSeeQ, reklam ve e-ticaret araştırmalarını tek panelde birleştiren bir platformdur. Meta Ads Library reklamlarını araştırabilir, TikTok Shop ürünlerini keşfedebilir ve Magic AI ile trend sinyallerini analiz edebilirsiniz.", en: "AdSeeQ is a platform that combines ad and ecommerce research in a single panel. You can research Meta Ads Library ads, discover TikTok Shop products, and analyze trend signals with Magic AI." },
+  "faq.2.q": { tr: "Hangi platformları destekliyorsunuz?", en: "Which platforms do you support?" },
+  "faq.2.a": { tr: "Şu anda Meta Ads Library (Facebook & Instagram) ve TikTok Shop verilerini destekliyoruz. Yakında daha fazla platform ekleyeceğiz.", en: "We currently support Meta Ads Library (Facebook & Instagram) and TikTok Shop data. More platforms will be added soon." },
+  "faq.3.q": { tr: "Magic AI nasıl çalışır?", en: "How does Magic AI work?" },
+  "faq.3.a": { tr: "Magic AI, reklam verilerini analiz eder ve kreatif açılar, hedef kitle fikirleri ve test edilebilir yaklaşımlar önerir. Bu şekilde reklam stratejinizi geliştirebilirsiniz.", en: "Magic AI analyzes ad data and suggests creative angles, audience ideas, and testable approaches to help improve your ad strategy." },
+
+  // ─── Footer ───
+  "footer.pricing": { tr: "Fiyatlandırma", en: "Pricing" },
+  "footer.startFree": { tr: "Ücretsiz başla", en: "Start free" },
+  "footer.signIn": { tr: "Giriş", en: "Sign In" },
+
+  // ─── Auth Pages ───
+  "auth.email": { tr: "E-posta", en: "Email" },
+  "auth.password": { tr: "Şifre", en: "Password" },
+  "auth.googleContinue": { tr: "Google ile devam et", en: "Continue with Google" },
+  "auth.or": { tr: "veya", en: "or" },
+  "auth.name": { tr: "Ad Soyad", en: "Full Name" },
+  "auth.submit": { tr: "Devam Et", en: "Continue" },
+  "auth.noAccount": { tr: "Hesabınız yok mu?", en: "Don't have an account?" },
+  "auth.haveAccount": { tr: "Zaten hesabınız var mı?", en: "Already have an account?" },
+  "auth.login.title": { tr: "Giriş yap", en: "Sign in" },
+  "auth.login.subtitle": { tr: "Hesabınızla veya Google üzerinden güvenli giriş yapın.", en: "Sign in securely with your account or Google." },
+  "auth.loginError": { tr: "E-posta veya şifre hatalı.", en: "Invalid email or password." },
+  "auth.emailPlaceholder": { tr: "E-posta adresiniz", en: "Your email address" },
+  "auth.passwordPlaceholder": { tr: "Şifreniz", en: "Your password" },
+  "auth.createAccount": { tr: "Hesap oluştur", en: "Create account" },
+  "auth.registerError": { tr: "Kayıt başarısız. E-posta kullanılıyor olabilir veya seed çalışmamış olabilir.", en: "Registration failed. Email may be in use or seed may not have been run." },
+  "auth.namePlaceholder": { tr: "Adınız", en: "Your name" },
+  "auth.passwordPlaceholderLong": { tr: "En az 10 karakterli şifreniz", en: "Your password (at least 10 characters)" },
+
+  // ─── Dashboard ───
+  "dashboard.title": { tr: "Panel", en: "Dashboard" },
+  "dashboard.ads": { tr: "Reklamlar", en: "Ads" },
+  "dashboard.trends": { tr: "Trendler", en: "Trends" },
+  "dashboard.brands": { tr: "Markalar", en: "Brands" },
+  "dashboard.stores": { tr: "Mağazalar", en: "Stores" },
+  "dashboard.admin": { tr: "Yönetim", en: "Admin" },
+
+  // ─── Ad Search ───
+  "ads.search.placeholder": { tr: "Anahtar kelime ara...", en: "Search keywords..." },
+  "ads.search.title": { tr: "Meta Ads Araştırması", en: "Meta Ads Research" },
+  "ads.search.description": { tr: "Anahtar kelime ve ülkeye göre medya içeren reklam kreatiflerini araştırın.", en: "Research ad creatives with media by keyword and country." },
+  "ads.search.country": { tr: "Ülke", en: "Country" },
+  "ads.search.allCountries": { tr: "Tüm Ülkeler", en: "All Countries" },
+  "ads.search.search": { tr: "Ara", en: "Search" },
+  "ads.search.results": { tr: "sonuç bulundu", en: "results found" },
+  "ads.search.noResults": { tr: "Sonuç bulunamadı", en: "No results found" },
+  "ads.noCreative": { tr: "Kreatif bulunamadı", en: "Creative not found" },
+  "ads.videoRefresh": { tr: "Video bağlantısı yenilenemedi. Aynı aramayı tekrar getirerek medyayı güncelleyebilirsiniz.", en: "Video link could not be refreshed. You can update the media by running the same search again." },
+  "ads.videoNotSupported": { tr: "Tarayıcınız video oynatmayı desteklemiyor.", en: "Your browser does not support video playback." },
+
+  // ─── Trends ───
+  "trends.title": { tr: "Trendler", en: "Trends" },
+  "trends.description": { tr: "Reklam formatı, niche, ülke ve mağaza büyüme sinyallerini canlı veriden karşılaştır.", en: "Compare ad format, niche, country and store growth signals from live data." },
+  "trends.totalAds": { tr: "İzlenen reklam", en: "Tracked ads" },
+  "trends.activeAds": { tr: "Aktif reklam", en: "Active ads" },
+  "trends.longRunners": { tr: "30+ gün yaşayan", en: "30+ day runners" },
+  "trends.newAds": { tr: "Son 14 gün", en: "Last 14 days" },
+  "trends.nicheDistribution": { tr: "Niche dağılımı", en: "Niche distribution" },
+  "trends.mediaFormat": { tr: "Medya formatı", en: "Media format" },
+  "trends.countrySignal": { tr: "Ülke sinyali", en: "Country signal" },
+  "trends.fastGrowingStores": { tr: "Hızlı büyüyen mağazalar", en: "Fast growing stores" },
+  "trends.byMonthlyGrowth": { tr: "Aylık ziyaret büyümesine göre", en: "By monthly visit growth" },
+  "trends.noNiche": { tr: "Niche yok", en: "No niche" },
+  "trends.historyTitle": { tr: "14 günlük geçmiş", en: "14-day history" },
+  "trends.historyDescription": { tr: "Günlük otomasyonla kaydedilen reklam ve TikTok Shop sinyalleri", en: "Ad and TikTok Shop signals saved by daily automation" },
+  "trends.tiktokProducts": { tr: "TikTok ürün", en: "TikTok products" },
+  "trends.noSnapshotYet": { tr: "İlk günlük snapshot henüz oluşmadı.", en: "First daily snapshot not yet created." },
+  "trends.rising": { tr: "Yükselen", en: "Rising" },
+  "trends.live": { tr: "Canlı", en: "Live" },
+  "trends.days": { tr: "gün", en: "days" },
+
+  // ─── Brand Tracker ───
+  "brand.title": { tr: "Marka Takibi", en: "Brand Tracker" },
+  "brand.description": { tr: "Markaları takip et; aktif reklam sayısını ve son kreatiflerini tek ekranda izle.", en: "Track brands; monitor active ad count and latest creatives on one screen." },
+  "brand.trackingLabel": { tr: "takip", en: "tracked" },
+  "brand.limitLabel": { tr: "Limit", en: "Limit" },
+  "brand.unlimited": { tr: "Sınırsız", en: "Unlimited" },
+  "brand.searchPlaceholder": { tr: "Marka, domain veya niche ara", en: "Search brand, domain or niche" },
+  "brand.search": { tr: "Ara", en: "Search" },
+  "brand.newAlerts": { tr: "Yeni reklam uyarıları", en: "New ad alerts" },
+  "brand.metaPage": { tr: "Meta marka sayfası", en: "Meta brand page" },
+  "brand.totalAds": { tr: "Toplam reklam", en: "Total ads" },
+  "brand.recentActive": { tr: "Son 3 aktif", en: "Recent 3 active" },
+  "brand.niche": { tr: "Niche", en: "Niche" },
+  "brand.headlessCreative": { tr: "Başlıksız kreatif", en: "Headless creative" },
+  "brand.days": { tr: "gün", en: "days" },
+  "brand.noAdsYet": { tr: "Henüz reklam verisi yok.", en: "No ad data yet." },
+  "brand.noResults": { tr: "Aramanızla eşleşen marka bulunamadı.", en: "No brands matching your search found." },
+  "brand.add": { tr: "Marka Ekle", en: "Add Brand" },
+  "brand.name": { tr: "Marka Adı", en: "Brand Name" },
+  "brand.track": { tr: "Takip Et", en: "Track" },
+  "brand.untrack": { tr: "Takibi bırak", en: "Untrack" },
+  "brand.tracking": { tr: "Takip ediliyor", en: "Tracking" },
+  "brand.noBrands": { tr: "Henüz takip edilen marka yok", en: "No tracked brands yet" },
+
+  // ─── Store Tracker ───
+  "store.title": { tr: "Mağaza Takibi", en: "Store Tracker" },
+  "store.description": { tr: "Plan limitine göre rakip Shopify mağazalarını watchlist'e ekle.", en: "Add competitor Shopify stores to watchlist per plan limit." },
+  "store.add": { tr: "Mağaza Ekle", en: "Add Store" },
+  "store.name": { tr: "Mağaza Adı", en: "Store Name" },
+  "store.track": { tr: "Takip Et", en: "Track" },
+  "store.similar": { tr: "Benzer Mağazalar", en: "Similar Stores" },
+  "store.noStores": { tr: "Henüz takip edilen mağaza yok", en: "No tracked stores yet" },
+  "store.placeholder": { tr: "ornek-magaza.com", en: "example-store.com" },
+  "store.adding": { tr: "Ekleniyor...", en: "Adding..." },
+  "store.added": { tr: "Mağaza takip listesine eklendi.", en: "Store added to tracking list." },
+  "store.addFailed": { tr: "Mağaza eklenemedi.", en: "Store could not be added." },
+  "store.removed": { tr: "Mağaza takip listesinden çıkarıldı.", en: "Store removed from tracking list." },
+  "store.removeFailed": { tr: "Mağaza çıkarılamadı.", en: "Store could not be removed." },
+  "store.removing": { tr: "Çıkarılıyor...", en: "Removing..." },
+  "store.onlyDatabase": { tr: "Yalnızca AdSeeQ veritabanında bulunan domainler eklenebilir.", en: "Only domains found in the AdSeeQ database can be added." },
+  "store.noBestsellers": { tr: "Bestseller yok", en: "No bestsellers" },
+
+  // ─── Pricing ───
+  "pricing.title": { tr: "Planlar", en: "Pricing" },
+  "pricing.description": { tr: "Kota tabanlı freemium model: arama, takip ve API kredileri planlara göre açılır.", en: "Quota-based freemium model: search, tracking and API credits are unlocked per plan." },
+  "pricing.perMonth": { tr: "/ay", en: "/month" },
+  "pricing.adsPerDay": { tr: "Ads arama/gün", en: "Ads search/day" },
+  "pricing.storeTracker": { tr: "Store tracker", en: "Store tracker" },
+  "pricing.savedAds": { tr: "Saved ads", en: "Saved ads" },
+  "pricing.unlimited": { tr: "Sınırsız", en: "Unlimited" },
+  "pricing.startFree": { tr: "Ücretsiz başla", en: "Start free" },
+  "pricing.subtitle": { tr: "Size uygun planı seçin", en: "Choose the plan that fits you" },
+  "pricing.free": { tr: "Ücretsiz", en: "Free" },
+  "pricing.pro": { tr: "Pro", en: "Pro" },
+  "pricing.enterprise": { tr: "Kurumsal", en: "Enterprise" },
+  "pricing.monthly": { tr: "Aylık", en: "Monthly" },
+  "pricing.yearly": { tr: "Yıllık", en: "Yearly" },
+  "pricing.choose": { tr: "Seç", en: "Choose" },
+  "pricing.current": { tr: "Mevcut", en: "Current" },
+
+  // ─── Admin ───
+  "admin.title": { tr: "AdSeeQ Admin", en: "AdSeeQ Admin" },
+  "admin.controlCenter": { tr: "Kontrol Merkezi", en: "Control Center" },
+  "admin.description": { tr: "Kullanıcı, gelir, kredi ve operasyon görünümü.", en: "User, revenue, credit and operations overview." },
+  "admin.systemActive": { tr: "Sistem aktif", en: "System active" },
+  "admin.totalUsers": { tr: "Toplam kullanıcı", en: "Total users" },
+  "admin.admins": { tr: "admin", en: "admins" },
+  "admin.activeSubscriptions": { tr: "Aktif abonelik", en: "Active subscriptions" },
+  "admin.revenue30d": { tr: "30 gün gelir", en: "30-day revenue" },
+  "admin.payments": { tr: "ödeme", en: "payments" },
+  "admin.distributedCredits": { tr: "Dağıtılan kredi", en: "Distributed credits" },
+  "admin.quickAction": { tr: "Hızlı işlem", en: "Quick action" },
+  "admin.manageUsers": { tr: "Kullanıcı yönet →", en: "Manage users →" },
+  "admin.recentPayments": { tr: "Son ödemeler", en: "Recent payments" },
+  "admin.viewAll": { tr: "Tümü", en: "View all" },
+  "admin.noPaymentsYet": { tr: "Henüz ödeme kaydı yok.", en: "No payment records yet." },
+  "admin.recentAdminActions": { tr: "Son admin işlemleri", en: "Recent admin actions" },
+  "admin.logCenter": { tr: "Log merkezi", en: "Log center" },
+  "admin.noAuditLogsYet": { tr: "Henüz audit kaydı yok.", en: "No audit logs yet." },
+  "admin.users": { tr: "Kullanıcılar", en: "Users" },
+  "admin.settings": { tr: "Ayarlar", en: "Settings" },
+  "admin.analytics": { tr: "Analitik", en: "Analytics" },
+
+  // ─── Account ───
+  "account.title": { tr: "Hesabım", en: "My Account" },
+  "account.account": { tr: "Hesap", en: "Account" },
+  "account.role": { tr: "Yetki", en: "Role" },
+  "account.plan": { tr: "Plan", en: "Plan" },
+  "account.noSubscription": { tr: "Abonelik yok", en: "No subscription" },
+  "account.creditBalance": { tr: "Kredi bakiyesi", en: "Credit balance" },
+
+  // ─── Saved Ads ───
+  "savedAds.title": { tr: "Kaydedilen Reklamlar", en: "Saved Ads" },
+  "savedAds.folders": { tr: "Klasörler", en: "Folders" },
+  "savedAds.allAds": { tr: "Tüm Kaydedilenler", en: "All Saved Ads" },
+  "savedAds.all": { tr: "Tümü", en: "All" },
+
+  // ─── Stores ───
+  "stores.title": { tr: "Mağazaları Keşfet", en: "Explore Stores" },
+  "stores.description": { tr: "Shopify mağazalarını trafik, gelir, niche ve aktif reklam sayısıyla keşfet.", en: "Discover Shopify stores by traffic, revenue, niche and active ad count." },
+  "stores.searchPlaceholder": { tr: "petpro, beauty, supplements...", en: "petpro, beauty, supplements..." },
+  "stores.allNiches": { tr: "Tüm niche", en: "All niches" },
+  "stores.search": { tr: "Ara", en: "Search" },
+  "stores.shopInfo": { tr: "Mağaza Bilgisi", en: "Shop Info" },
+  "stores.bestSellers": { tr: "En Çok Satanlar", en: "Best Sellers" },
+  "stores.niche": { tr: "Niche", en: "Niche" },
+  "stores.monthlyVisits": { tr: "Aylık Ziyaret", en: "Monthly Visits" },
+  "stores.estRevenue": { tr: "Tahmini Gelir 30g", en: "Est. Revenue 30d" },
+  "stores.metaAds": { tr: "Meta Reklamları", en: "Meta Ads" },
+  "stores.details": { tr: "Detaylar", en: "Details" },
+
+  // ─── Common ───
+  "common.loading": { tr: "Yükleniyor...", en: "Loading..." },
+  "common.search": { tr: "Ara", en: "Search" },
+  "common.filter": { tr: "Filtrele", en: "Filter" },
+  "common.save": { tr: "Kaydet", en: "Save" },
+  "common.cancel": { tr: "İptal", en: "Cancel" },
+  "common.delete": { tr: "Sil", en: "Delete" },
+  "common.edit": { tr: "Düzenle", en: "Edit" },
+  "common.view": { tr: "Görüntüle", en: "View" },
+  "common.back": { tr: "Geri", en: "Back" },
+  "common.next": { tr: "Sonraki", en: "Next" },
+  "common.previous": { tr: "Önceki", en: "Previous" },
+  "common.close": { tr: "Kapat", en: "Close" },
+  "common.submit": { tr: "Gönder", en: "Submit" },
+  "common.success": { tr: "Başarılı", en: "Success" },
+  "common.error": { tr: "Hata", en: "Error" },
+  "common.tryAgain": { tr: "Tekrar Dene", en: "Try Again" },
+  "common.required": { tr: "Zorunlu", en: "Required" },
+  "common.optional": { tr: "Opsiyonel", en: "Optional" },
+
+  // ─── Meta Ads Specific ───
+  "meta.title": { tr: "Meta Reklamları", en: "Meta Ads" },
+  "meta.library": { tr: "Reklam Kütüphanesi", en: "Ad Library" },
+  "meta.creative": { tr: "Kreatif", en: "Creative" },
+  "media.image": { tr: "Görsel", en: "Image" },
+  "media.video": { tr: "Video", en: "Video" },
+  "media.none": { tr: "Medya yok", en: "No media" },
+
+  // ─── Ads Page ───
+  "ads.description": { tr: "Kazanan Meta reklamlarını anahtar kelime, ülke, niş ve medya tipine göre keşfet.", en: "Discover winning Meta ads by keyword, country, niche and media type." },
+  "ads.planLabel": { tr: "Plan", en: "Plan" },
+  "ads.planWarning": { tr: "Free ise kartlar kilitli", en: "Cards locked if Free" },
+  "ads.searchPlaceholder": { tr: "Marka, ürün veya anahtar kelime...", en: "Brand, product or keyword..." },
+  "ads.country": { tr: "Ülke", en: "Country" },
+  "ads.allMedia": { tr: "Tüm medya", en: "All media" },
+  "ads.search": { tr: "Ara", en: "Search" },
+  "ads.advancedSearch": { tr: "Detaylı arama", en: "Advanced search" },
+  "ads.matchMode": { tr: "Kelime eşleşmesi", en: "Word match" },
+  "ads.allWords": { tr: "Tüm kelimeler", en: "All words" },
+  "ads.exactPhrase": { tr: "Tam ifade", en: "Exact phrase" },
+  "ads.adStatus": { tr: "Reklam durumu", en: "Ad status" },
+  "ads.activeAds": { tr: "Aktif reklamlar", en: "Active ads" },
+  "ads.inactiveAds": { tr: "Pasif reklamlar", en: "Inactive ads" },
+  "ads.allStatuses": { tr: "Tüm durumlar", en: "All statuses" },
+  "ads.minRunTime": { tr: "Minimum yayın süresi", en: "Minimum run time" },
+  "ads.allDurations": { tr: "Tüm süreler", en: "All durations" },
+  "ads.minDays": { tr: "En az {{days}} gün", en: "At least {{days}} days" },
+  "ads.allNiches": { tr: "Tüm nişler", en: "All niches" },
+  "ads.language": { tr: "Dil", en: "Language" },
+  "ads.allLanguages": { tr: "Tüm diller", en: "All languages" },
+  "ads.turkish": { tr: "Türkçe", en: "Turkish" },
+  "ads.english": { tr: "İngilizce", en: "English" },
+  "ads.german": { tr: "Almanca", en: "German" },
+  "ads.french": { tr: "Fransızca", en: "French" },
+  "ads.spanish": { tr: "İspanyolca", en: "Spanish" },
+  "ads.sortBy": { tr: "Sıralama", en: "Sort by" },
+  "ads.mostRelevant": { tr: "En ilgili", en: "Most relevant" },
+  "ads.newest": { tr: "En yeni", en: "Newest" },
+  "ads.longestRunning": { tr: "En uzun süren", en: "Longest running" },
+  "ads.unlockWinners": { tr: "Start now — Unlock winners", en: "Start now — Unlock winners" },
+  "ads.days": { tr: "gün", en: "days" },
+  "ads.minSpend": { tr: "Min spend", en: "Min spend" },
+  "ads.score": { tr: "Score", en: "Score" },
+
+  // ─── TikTok Specific ───
+  "tiktok.title": { tr: "TikTok Shop", en: "TikTok Shop" },
+  "tiktok.description": { tr: "Canlı ürün, satış, fiyat, mağaza ve değerlendirme sinyalleri.", en: "Live product, sales, price, store and rating signals." },
+  "tiktok.products": { tr: "Ürünler", en: "Products" },
+  "tiktok.store": { tr: "Mağaza", en: "Store" },
+  "tiktok.signals": { tr: "Sinyaller", en: "Signals" },
+  "tiktok.productsUpdated": { tr: "ürün güncellendi.", en: "products updated." },
+  "tiktok.importFailed": { tr: "İçe aktarma başarısız.", en: "Import failed." },
+  "tiktok.searchPlaceholder": { tr: "TikTok Shop ürününü canlı ara", en: "Search TikTok Shop products live" },
+  "tiktok.fetching": { tr: "Getiriliyor…", en: "Fetching…" },
+  "tiktok.fetchLive": { tr: "Canlı veriden getir", en: "Fetch from live data" },
+  "tiktok.upgradePlan": { tr: "Planı yükselt", en: "Upgrade plan" },
+  "tiktok.filter": { tr: "Filtrele", en: "Filter" },
+  "tiktok.allRegions": { tr: "Tüm bölgeler", en: "All regions" },
+  "tiktok.liveProducts": { tr: "Canlı ürün", en: "Live products" },
+  "tiktok.stores": { tr: "Mağaza", en: "Stores" },
+  "tiktok.totalSalesSignal": { tr: "Toplam satış sinyali", en: "Total sales signal" },
+  "tiktok.noProductImage": { tr: "Ürün görseli yok", en: "No product image" },
+  "tiktok.storeUnknown": { tr: "Mağaza bilinmiyor", en: "Store unknown" },
+  "tiktok.price": { tr: "Fiyat", en: "Price" },
+  "tiktok.sales": { tr: "Satış", en: "Sales" },
+  "tiktok.score": { tr: "Puan", en: "Score" },
+  "tiktok.openOnTiktok": { tr: "TikTok'ta aç →", en: "Open on TikTok →" },
+  "tiktok.searchFirst": { tr: "Yukarıdan bir ürün aratıp canlı veriyi getirin.", en: "Search for a product above and fetch live data." },
+
+  // ─── AI & Magic ───
+  "ai.magic": { tr: "Magic AI", en: "Magic AI" },
+  "ai.description": { tr: "Kreatif dayanıklılığı, formatı ve reklam metnini analiz ederek uygulanabilir test önerileri üretir.", en: "Analyzes creative durability, format and ad copy to generate actionable test recommendations." },
+  "ai.generalAnalysis": { tr: "Genel kreatif analizi", en: "General creative analysis" },
+  "ai.actionPlanTitle": { tr: "reklamdan aksiyon planı", en: "action plan from ads" },
+  "ai.actionPlanDescription": { tr: "Öneriler canlı reklam süresi ve mevcut kreatif sinyallerinden hesaplanır.", en: "Recommendations are calculated from live ad duration and current creative signals." },
+  "ai.headlessAd": { tr: "Başlıksız reklam", en: "Headless ad" },
+  "ai.unknownBrand": { tr: "Bilinmeyen marka", en: "Unknown brand" },
+  "ai.days": { tr: "gün", en: "days" },
+  "ai.hook": { tr: "Kanca", en: "Hook" },
+  "ai.noAdsToAnalyze": { tr: "Analiz edilecek reklam bulunamadı.", en: "No ads found to analyze." },
+  "ai.analyze": { tr: "Analiz Et", en: "Analyze" },
+  "ai.generating": { tr: "Oluşturuluyor...", en: "Generating..." },
+  "ai.suggestions": { tr: "Öneriler", en: "Suggestions" },
+  "ai.angles": { tr: "Kreatif Açılar", en: "Creative Angles" },
+  "ai.audience": { tr: "Hedef Kitle", en: "Target Audience" },
+  "ai.approaches": { tr: "Yaklaşımlar", en: "Approaches" },
+  "ai.analysisSaved": { tr: "Yeni AI analizi kaydedildi.", en: "New AI analysis saved." },
+  "ai.analysisFailed": { tr: "Analiz başarısız.", en: "Analysis failed." },
+  "ai.inputPlaceholder": { tr: "Ürün, marka veya reklam metni", en: "Product, brand or ad text" },
+  "ai.analyzing": { tr: "AI analiz ediyor…", en: "AI analyzing…" },
+  "ai.realAnalysis": { tr: "Gerçek AI analizi", en: "Real AI analysis" },
+
+  // ─── Notifications ───
+  "notif.success": { tr: "İşlem başarılı", en: "Operation successful" },
+  "notif.error": { tr: "Bir hata oluştu", en: "An error occurred" },
+  "notif.saved": { tr: "Kaydedildi", en: "Saved" },
+  "notif.deleted": { tr: "Silindi", en: "Deleted" },
+  "notif.updated": { tr: "Güncellendi", en: "Updated" },
+
+  // ─── Checkout ───
+  "checkout.buy": { tr: "Satın al", en: "Buy" },
+  "checkout.redirecting": { tr: "Yönlendiriliyor…", en: "Redirecting…" },
+  "checkout.error": { tr: "Ödeme başlatılamadı.", en: "Payment could not be started." },
+};
+
+export function useT() {
+  const [lang] = useLang();
+  return (key: string, params?: Record<string, string | number>): string => {
+    const entry = DICT[key];
+    if (!entry) {
+      console.warn(`[i18n] Missing key: ${key}`);
+      return key;
+    }
+    let text = lang === "tr" ? entry.tr : entry.en;
+    if (params) {
+      Object.keys(params).forEach(param => {
+        text = text.replace(`{{${param}}}`, String(params[param]));
+      });
+    }
+    return text;
+  };
+}
+
+export { DICT };
+export type { Lang };

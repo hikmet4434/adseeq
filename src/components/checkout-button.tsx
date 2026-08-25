@@ -1,7 +1,9 @@
 "use client";
 import { useState } from "react";
+import { useT } from "@/lib/i18n";
 
 export function CheckoutButton({ planCode }: { planCode: "BASIC" | "STANDARD" | "PREMIUM" }) {
+  const t = useT();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function checkout() {
@@ -12,7 +14,7 @@ export function CheckoutButton({ planCode }: { planCode: "BASIC" | "STANDARD" | 
       if (response.status === 401) { window.location.href = "/login?next=/pricing"; return; }
       if (!response.ok || !data.url) throw new Error(data.error || "CHECKOUT_FAILED");
       window.location.href = data.url;
-    } catch (caught) { setError(caught instanceof Error ? caught.message : "Ödeme başlatılamadı."); setBusy(false); }
+    } catch (caught) { setError(caught instanceof Error ? caught.message : t("checkout.error")); setBusy(false); }
   }
-  return <><button type="button" onClick={checkout} disabled={busy} className="mt-6 w-full rounded-xl bg-violet-700 px-4 py-2 font-bold text-white disabled:opacity-50">{busy ? "Yönlendiriliyor…" : "Satın al"}</button>{error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}</>;
+  return <><button type="button" onClick={checkout} disabled={busy} className="mt-6 w-full rounded-xl bg-violet-700 px-4 py-2 font-bold text-white disabled:opacity-50">{busy ? t("checkout.redirecting") : t("checkout.buy")}</button>{error && <p className="mt-2 text-xs font-semibold text-rose-600">{error}</p>}</>;
 }
