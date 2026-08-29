@@ -28,3 +28,7 @@ COPY --from=builder /app/next.config.mjs ./next.config.mjs
 
 EXPOSE 3000
 CMD ["npm", "run", "start:deploy"]
+
+# --- Agentic Security Firewall: Katman 2 (non-root hardening) ---
+RUN [ -d /app ] && chown -R node:node /app || true
+USER node
