@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { BrandLogo } from "@/components/brand-logo";
+import { useT } from "@/lib/i18n";
 
 function GoogleIcon() {
   return (
@@ -15,6 +16,7 @@ function GoogleIcon() {
 }
 
 export default function LoginPage() {
+  const t = useT();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -22,13 +24,13 @@ export default function LoginPage() {
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     setError("");
-    const res = await fetch("/api/auth/login", { 
-      method: "POST", 
-      headers: { "content-type": "application/json" }, 
-      body: JSON.stringify({ email, password }) 
+    const res = await fetch("/api/auth/login", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, password })
     });
     if (!res.ok) {
-      setError("E-posta veya şifre hatalı.");
+      setError(t("auth.loginError"));
       return;
     }
     location.href = "/dashboard/ads";
@@ -38,50 +40,50 @@ export default function LoginPage() {
     <main className="grid min-h-screen place-items-center bg-slate-50 px-4">
       <form onSubmit={submit} className="w-full max-w-md rounded-3xl bg-white p-8 shadow-soft">
         <a href="/" className="mb-7 inline-flex"><BrandLogo /></a>
-        <h1 className="text-3xl font-black">Giriş yap</h1>
-        <p className="mt-2 text-sm text-slate-500">Hesabınızla veya Google üzerinden güvenli giriş yapın.</p>
-        
-        <label className="mt-6 block text-sm font-bold">E-posta</label>
-        <input 
-          type="email" 
-          placeholder="E-posta adresiniz"
-          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-600" 
-          value={email} 
-          onChange={(e) => setEmail(e.target.value)} 
+        <h1 className="text-3xl font-black">{t("auth.login.title")}</h1>
+        <p className="mt-2 text-sm text-slate-500">{t("auth.login.subtitle")}</p>
+
+        <label className="mt-6 block text-sm font-bold">{t("auth.email")}</label>
+        <input
+          type="email"
+          placeholder={t("auth.emailPlaceholder")}
+          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-600"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
           required
         />
-        
-        <label className="mt-4 block text-sm font-bold">Şifre</label>
-        <input 
-          type="password" 
-          placeholder="Şifreniz"
-          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-600" 
-          value={password} 
-          onChange={(e) => setPassword(e.target.value)} 
+
+        <label className="mt-4 block text-sm font-bold">{t("auth.password")}</label>
+        <input
+          type="password"
+          placeholder={t("auth.passwordPlaceholder")}
+          className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 focus:outline-none focus:ring-2 focus:ring-violet-600"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
           required
         />
-        
+
         {error && <div className="mt-4 rounded-xl bg-red-50 p-3 text-sm text-red-700">{error}</div>}
 
         <a href="/api/auth/google/start" className="mt-6 flex w-full items-center justify-center gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-slate-50">
           <GoogleIcon />
-          Google ile devam et
+          {t("auth.googleContinue")}
         </a>
-        
+
         <div className="mt-4 flex items-center gap-3">
           <div className="h-px flex-1 bg-slate-200" />
-          <span className="text-xs font-medium text-slate-400">veya</span>
+          <span className="text-xs font-medium text-slate-400">{t("auth.or")}</span>
           <div className="h-px flex-1 bg-slate-200" />
         </div>
-        
+
         <button type="submit" className="mt-4 w-full rounded-xl bg-violet-700 px-4 py-3 font-bold text-white hover:bg-violet-800 transition">
-          Giriş yap
+          {t("auth.login.title")}
         </button>
 
         <div className="mt-6 text-center text-sm">
-          <span className="text-slate-500">Hesabınız yok mu? </span>
+          <span className="text-slate-500">{t("auth.noAccount")} </span>
           <a href="/register" className="font-semibold text-violet-700 hover:underline">
-            Hesap oluştur
+            {t("auth.createAccount")}
           </a>
         </div>
       </form>

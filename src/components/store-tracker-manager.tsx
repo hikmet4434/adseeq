@@ -2,6 +2,7 @@
 
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 
 type TrackedStoreItem = {
   id: string;
@@ -16,6 +17,7 @@ type TrackedStoreItem = {
 
 export function StoreTrackerManager({ tracked, limit }: { tracked: TrackedStoreItem[]; limit: number | null }) {
   const router = useRouter();
+  const t = useT();
   const [domain, setDomain] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
   const [message, setMessage] = useState("");
@@ -32,9 +34,9 @@ export function StoreTrackerManager({ tracked, limit }: { tracked: TrackedStoreI
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "STORE_TRACKER_FAILED");
-      setDomain(""); setError(false); setMessage("Mağaza takip listesine eklendi."); router.refresh();
+      setDomain(""); setError(false); setMessage(t("store.added")); router.refresh();
     } catch (caught) {
-      setError(true); setMessage(caught instanceof Error ? caught.message : "Mağaza eklenemedi.");
+      setError(true); setMessage(caught instanceof Error ? caught.message : t("store.addFailed"));
     } finally { setBusy(null); }
   }
 
@@ -44,23 +46,23 @@ export function StoreTrackerManager({ tracked, limit }: { tracked: TrackedStoreI
       const response = await fetch(`/api/tracked-stores/${id}`, { method: "DELETE" });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "STORE_TRACKER_FAILED");
-      setError(false); setMessage("Mağaza takip listesinden çıkarıldı."); router.refresh();
+      setError(false); setMessage(t("store.removed")); router.refresh();
     } catch (caught) {
-      setError(true); setMessage(caught instanceof Error ? caught.message : "Mağaza çıkarılamadı.");
+      setError(true); setMessage(caught instanceof Error ? caught.message : t("store.removeFailed"));
     } finally { setBusy(null); }
   }
 
   return (
     <div>
       <form onSubmit={addStore} className="mb-4 flex flex-col gap-3 sm:flex-row">
-        <input value={domain} onChange={(event) => setDomain(event.target.value)} required placeholder="ornek-magaza.com" className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-4 py-3" />
-        <button disabled={busy !== null} className="rounded-2xl bg-slate-950 px-5 py-3 font-bold text-white disabled:opacity-50">{busy === "add" ? "Ekleniyor…" : "Mağazayı takip et"}</button>
+        <input value={domain} onChange={(event) => setDomain(event.target.value)} required placeholder={t("store.placeholder")} className="min-w-0 flex-1 rounded-2xl border border-slate-200 px-4 py-3" />
+        <button disabled={busy !== null} className="rounded-2xl bg-slate-950 px-5 py-3 font-bold text-white disabled:opacity-50">{busy === "add" ? t("store.adding") : t("store.track")}</button>
       </form>
-      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-sm"><span className="text-slate-500">Yalnızca AdSeeQ veritabanında bulunan domainler eklenebilir.</span><span className="rounded-full bg-violet-50 px-3 py-1 font-bold text-violet-700">{tracked.length} / {limit === null ? "∞" : limit}</span></div>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2 text-sm"><span className="text-slate-500">{t("store.onlyDatabase")}</span><span className="rounded-full bg-violet-50 px-3 py-1 font-bold text-violet-700">{tracked.length} / {limit === null ? "∞" : limit}</span></div>
       {message && <div className={`mb-4 rounded-xl p-3 text-sm font-semibold ${error ? "bg-rose-50 text-rose-700" : "bg-emerald-50 text-emerald-700"}`}>{message}</div>}
       <div className="space-y-3">
-        {tracked.map((item) => <div key={item.id} className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"><a href={`/dashboard/stores/${item.store.id}`} className="min-w-0"><div className="truncate font-black">{item.store.name}</div><div className="truncate text-sm text-slate-500">{item.store.domain} · {item.store.products.map((product) => product.title).join(", ") || "Bestseller yok"} · €{item.store.estRevenue30dMax?.toLocaleString() || "—"} est.</div></a><button type="button" disabled={busy !== null} onClick={() => removeStore(item.id)} className="shrink-0 rounded-xl border border-rose-200 px-4 py-2 text-sm font-bold text-rose-700 disabled:opacity-50">{busy === item.id ? "Çıkarılıyor…" : "Takibi bırak"}</button></div>)}
-        {!tracked.length && <div className="rounded-2xl bg-amber-50 p-4 text-amber-800">Henüz takip edilen mağaza yok.</div>}
+        {tracked.map((item) => <div key={item.id} className="flex flex-col gap-3 rounded-2xl bg-slate-50 p-4 sm:flex-row sm:items-center sm:justify-between"><a href={`/dashboard/stores/${item.store.id}`} className="min-w-0"><div className="truncate font-black">{item.store.name}</div><div className="truncate text-sm text-slate-500">{item.store.domain} · {item.store.products.map((product) => product.title).join(", ") || t("store.noBestsellers")} · €{item.store.estRevenue30dMax?.toLocaleString() || "—"} est.</div></a><button type="button" disabled={busy !== null} onClick={() => removeStore(item.id)} className="shrink-0 rounded-xl border border-rose-200 px-4 py-2 text-sm font-bold text-rose-700 disabled:opacity-50">{busy === item.id ? t("store.removing") : t("brand.untrack")}</button></div>)}
+        {!tracked.length && <div className="rounded-2xl bg-amber-50 p-4 text-amber-800">{t("store.noStores")}</div>}
       </div>
     </div>
   );

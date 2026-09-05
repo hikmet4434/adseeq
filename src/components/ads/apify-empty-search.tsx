@@ -2,12 +2,14 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useT } from "@/lib/i18n";
 
 const RESULT_LIMIT = 10;
 const RESULT_OPTIONS = [10, 25, 50, 100];
 
 export function ApifyEmptySearch({ query, country, mediaType, matchMode, status, planLimit, existingCount = 0 }: { query: string; country: string; mediaType: string; matchMode: "ALL_WORDS" | "EXACT_PHRASE"; status: "ACTIVE" | "INACTIVE" | "ALL"; planLimit: number; existingCount?: number }) {
   const router = useRouter();
+  const t = useT();
   const [maxResults, setMaxResults] = useState(RESULT_LIMIT);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
@@ -38,17 +40,17 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
         })
       });
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw new Error("Canlı reklam taraması başarısız oldu.");
+      if (!response.ok) throw new Error(t("apifyEmpty.scanFailed"));
 
       setError(false);
       const prepared = data.mediaEnriched ?? data.imported ?? 0;
       setMessage(prepared > 0
-        ? `Meta'da ${data.received} aday tarandı, ${data.relevant} ilgili reklam bulundu; ${prepared} reklamın medyası hazırlandı. Sonuçlar yenileniyor…`
-        : `Meta'da ${data.received} aday ve ${data.relevant} ilgili reklam bulundu; seçili ${mediaType === "ALL" ? "medya" : mediaType.toLocaleLowerCase("tr-TR")} türünde kullanılabilir kreatif bulunamadı.`);
+        ? t("apifyEmpty.successPrepared", { received: data.received, relevant: data.relevant, prepared })
+        : t("apifyEmpty.successNoCreative", { received: data.received, relevant: data.relevant }));
       router.refresh();
     } catch (caught) {
       setError(true);
-      setMessage(caught instanceof Error ? caught.message : "Canlı reklam taraması başarısız oldu.");
+      setMessage(caught instanceof Error && caught.message !== t("apifyEmpty.scanFailed") ? caught.message : t("apifyEmpty.scanFailed"));
     } finally {
       setBusy(false);
     }
@@ -56,14 +58,14 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
 
   return (
     <div className="rounded-3xl border border-dashed border-violet-200 bg-violet-50/60 p-8 text-center md:col-span-2 xl:col-span-3">
-      <h2 className="text-xl font-black">{existingCount > 0 ? `Daha fazla “${query}” reklamı getir` : `“${query}” için kayıtlı reklam bulunamadı`}</h2>
+      <h2 className="text-xl font-black">{existingCount > 0 ? t("apifyEmpty.bringMore", { query }) : t("apifyEmpty.noneFound", { query })}</h2>
       <p className="mx-auto mt-2 max-w-2xl text-sm text-slate-600">
         {existingCount > 0
-          ? `Şu anda ${existingCount} ilgili reklam gösteriliyor. Yeni Meta reklamlarını aynı detaylı filtrelerle canlı olarak tarayabilirsiniz.`
-          : "Bu arama önce AdSeeQ veritabanını kontrol eder. Yeni Meta reklamlarını seçtiğiniz ülke ve medya türüyle canlı olarak getirip aynı aramaya ekleyebilirsiniz."}
+          ? t("apifyEmpty.showingExisting", { count: existingCount })
+          : t("apifyEmpty.dbFirst")}
       </p>
       <div className="mx-auto mt-5 flex max-w-sm gap-2">
-        <label className="sr-only" htmlFor="apify-result-count">Getirilecek reklam adedi</label>
+        <label className="sr-only" htmlFor="apify-result-count">{t("apifyEmpty.resultCount")}</label>
         <select
           id="apify-result-count"
           value={maxResults}
@@ -71,7 +73,7 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
           onChange={(event) => setMaxResults(Number(event.target.value))}
           className="min-w-0 flex-1 rounded-2xl border border-violet-200 bg-white px-4 py-3 font-bold"
         >
-          {RESULT_OPTIONS.filter((count) => count <= planLimit).map((count) => <option key={count} value={count}>{count} reklam</option>)}
+          {RESULT_OPTIONS.filter((count) => count <= planLimit).map((count) => <option key={count} value={count}>{t("apifyEmpty.adsCount", { count })}</option>)}
         </select>
         <button
           type="button"
@@ -79,11 +81,11 @@ export function ApifyEmptySearch({ query, country, mediaType, matchMode, status,
           onClick={importFromApify}
           className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white disabled:cursor-wait disabled:opacity-50"
         >
-          {busy ? (waitSeconds >= 8 ? "Videolar hazırlanıyor…" : "Meta taranıyor…") : planLimit === 0 ? "Planı yükselt" : existingCount > 0 ? "Daha fazla getir" : "Getir"}
+          {busy ? (waitSeconds >= 8 ? t("apifyEmpty.preparingVideos") : t("apifyEmpty.scanningMeta")) : planLimit === 0 ? t("apifyEmpty.upgradePlan") : existingCount > 0 ? t("apifyEmpty.bringMoreBtn") : t("apifyEmpty.bring")}
         </button>
       </div>
-      <p className="mt-2 text-xs text-slate-500">Canlı Meta verisi · {country === "ALL" ? "Tüm dünya" : country} · {mediaType === "ALL" ? "Tüm medya" : mediaType} · {matchMode === "EXACT_PHRASE" ? "Tam ifade" : "Tüm kelimeler"} · Plan limiti: {planLimit || "erişim yok"} reklam</p>
-      {busy && <p className="mt-2 text-xs font-semibold text-violet-700">Meta sonuçları ve gerçek video/görseller hazırlanıyor. Bu işlem genellikle 15–60 saniye sürer.</p>}
+      <p className="mt-2 text-xs text-slate-500">{t("apifyEmpty.liveMeta")} · {country === "ALL" ? t("apifyEmpty.allWorld") : country} · {mediaType === "ALL" ? t("apifyEmpty.allMedia") : mediaType} · {matchMode === "EXACT_PHRASE" ? t("apifyEmpty.exactPhrase") : t("apifyEmpty.allWords")} · {t("apifyEmpty.planLimit")}: {planLimit || t("apifyEmpty.noAccess")} </p>
+      {busy && <p className="mt-2 text-xs font-semibold text-violet-700">{t("apifyEmpty.busyNote")}</p>}
       {message && <p className={`mt-3 text-sm font-semibold ${error ? "text-rose-600" : "text-emerald-700"}`}>{message}</p>}
     </div>
   );
