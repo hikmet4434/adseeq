@@ -14,6 +14,7 @@ import robots from "../src/app/robots";
 import { GET as llmsTxt } from "../src/app/llms.txt/route";
 import { homeStructuredData, serializeJsonLd } from "../src/lib/seo";
 import { isSafeMediaHostname } from "../src/lib/media-proxy";
+import { ConversionSignalAd, detectOffers, extractPriceTry, normalizeLandingUrl, rankProductsByConversionCost } from "../src/lib/conversion-finder";
 
 test("Apify reklamı metin, medya ve ülke alanlarıyla normalize edilir", () => {
   const ad = normalizeApifyAd({
@@ -181,4 +182,29 @@ test("Meta medya seçimi resmi kimliği önceler ve ilgili medya yedeğini sıf�
   assert.deepEqual(selection.records.map((record) => record.ad_id), ["official-1", "fallback-1"]);
   assert.equal(selection.officialMatches, 1);
   assert.equal(selection.fallbackMatches, 1);
+});
+
+test("dönüşüm bulucu Türkçe fiyat ve teklif sinyallerini çıkarır", () => {
+  assert.equal(extractPriceTry("Sadece ₺1.299,90 yerine 799,90 TL! Ücretsiz kargo, kapıda ödeme"), 799.9);
+  assert.equal(extractPriceTry("Kampanyayı kaçırma"), null);
+  assert.deepEqual(detectOffers("Ücretsiz kargo ve kapıda ödeme, %40 indirim, sınırlı stok"), ["Ücretsiz kargo", "Kapıda ödeme", "İndirim", "Aciliyet"]);
+  assert.equal(normalizeLandingUrl("https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.magaza.com%2Furun%2Fakilli-tasma%3Futm_source%3Dfb")?.canonical, "https://magaza.com/urun/akilli-tasma");
+});
+
+test("dönüşüm bulucu ürünleri gruplar ve düşük maliyet endeksini öne alır", () => {
+  const base = { description: null, productUrl: null, firstSeenAt: null, brandLogoUrl: null, thumbnailUrl: null, brandPageId: "brand-1", brandName: "Marka" };
+  const ads: ConversionSignalAd[] = [
+    { ...base, id: "a1", headline: "Akıllı Tasma", primaryText: "₺499 ücretsiz kargo, kapıda ödeme", landingUrl: "https://magaza.com/urun/akilli-tasma?utm=1", mediaType: "VIDEO", status: "ACTIVE", daysRunning: 90 },
+    { ...base, id: "a2", headline: "Akıllı Tasma", primaryText: "Son gün %30 indirim", landingUrl: "https://www.magaza.com/urun/akilli-tasma/", mediaType: "VIDEO", status: "ACTIVE", daysRunning: 40 },
+    { ...base, id: "a3", headline: "Lüks Saat", primaryText: "₺12.500", landingUrl: "https://magaza.com/urun/luks-saat", mediaType: "IMAGE", status: "INACTIVE", daysRunning: 3 }
+  ];
+  const ranked = rankProductsByConversionCost(ads, 100);
+  assert.equal(ranked.length, 2);
+  assert.equal(ranked[0].productName, "Akıllı Tasma");
+  assert.equal(ranked[0].adCount, 2);
+  assert.equal(ranked[0].priceTry, 499);
+  assert.ok(ranked[0].costIndex < ranked[1].costIndex);
+  assert.ok(ranked[0].estimatedCpaTry && ranked[0].estimatedCpaTry.min < ranked[0].estimatedCpaTry.max);
+  assert.equal(ranked[0].band === "COK_DUSUK" || ranked[0].band === "DUSUK", true);
+  assert.equal(ranked[1].band === "ORTA" || ranked[1].band === "YUKSEK", true);
 });

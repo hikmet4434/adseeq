@@ -6,7 +6,7 @@ import { useState } from "react";
 const items = [
   ["Ads", "/dashboard/ads"], ["Stores", "/dashboard/stores"], ["Store Tracker", "/dashboard/store-tracker"],
   ["Saved Ads", "/dashboard/saved-ads"], ["TikTok Shop", "/dashboard/tiktok-shop"], ["Magic AI", "/dashboard/magic-ai"],
-  ["Trends", "/dashboard/trends"], ["Brand Tracker", "/dashboard/brand-tracker"], ["Account", "/dashboard/account"]
+  ["Trends", "/dashboard/trends"], ["Ucuz Dönüşüm", "/dashboard/conversion-finder"], ["Brand Tracker", "/dashboard/brand-tracker"], ["Account", "/dashboard/account"]
 ];
 
 export function DashboardMobileNav({ isAdmin }: { isAdmin: boolean }) {

@@ -18,6 +18,7 @@ const nav = [
   ["TikTok Shop", "/dashboard/tiktok-shop"],
   ["Magic AI", "/dashboard/magic-ai"],
   ["Trends", "/dashboard/trends"],
+  ["Ucuz Dönüşüm", "/dashboard/conversion-finder"],
   ["Brand Tracker", "/dashboard/brand-tracker"]
 ];
 
