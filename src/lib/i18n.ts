@@ -113,6 +113,12 @@ const DICT: Dict = {
   "ads.search.noResults": { tr: "Sonuç bulunamadı", en: "No results found" },
   "ads.noCreative": { tr: "Kreatif bulunamadı", en: "Creative not found" },
   "ads.videoRefresh": { tr: "Video bağlantısı yenilenemedi. Aynı aramayı tekrar getirerek medyayı güncelleyebilirsiniz.", en: "Video link could not be refreshed. You can update the media by running the same search again." },
+  "ads.videoExpired": { tr: "Meta video bağlantısının süresi dolmuş", en: "The Meta video link has expired" },
+  "ads.videoRefreshButton": { tr: "Videoyu yenile", en: "Refresh video" },
+  "ads.imageRefreshButton": { tr: "Görseli yenile", en: "Refresh image" },
+  "ads.videoRefreshing": { tr: "Yenileniyor...", en: "Refreshing..." },
+  "ads.videoRefreshFailed": { tr: "Yenilenemedi; reklamı Meta'da izleyebilirsiniz.", en: "Could not refresh; you can watch the ad on Meta." },
+  "ads.watchOnMeta": { tr: "Meta'da izle ↗", en: "Watch on Meta ↗" },
   "ads.videoNotSupported": { tr: "Tarayıcınız video oynatmayı desteklemiyor.", en: "Your browser does not support video playback." },
 
   // ─── Trends ───

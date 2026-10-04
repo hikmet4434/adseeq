@@ -17,6 +17,18 @@ function isPrivateIpv6(address: string) {
   return normalized === "::1" || normalized === "::" || normalized.startsWith("fc") || normalized.startsWith("fd") || normalized.startsWith("fe8") || normalized.startsWith("fe9") || normalized.startsWith("fea") || normalized.startsWith("feb");
 }
 
+// Meta CDN (fbcdn) bağlantıları imzalıdır; "oe" parametresi bağlantının son
+// geçerlilik zamanıdır (onaltılık Unix saniyesi). Süresi dolmuş bağlantıya istek atılmaz.
+export function isExpiredSignedUrl(value: string, now = Date.now()) {
+  try {
+    const oe = new URL(value).searchParams.get("oe");
+    if (!oe || !/^[0-9a-f]{6,10}$/i.test(oe)) return false;
+    return parseInt(oe, 16) * 1000 <= now;
+  } catch {
+    return false;
+  }
+}
+
 export function isSafeMediaHostname(hostname: string) {
   const normalized = hostname.toLowerCase().replace(/^\[|\]$/g, "");
   if (!normalized || normalized === "localhost" || normalized.endsWith(".localhost") || normalized.endsWith(".local") || normalized.endsWith(".internal")) return false;
