@@ -37,7 +37,7 @@ export default async function StoppedAdvertisersPage({ searchParams }: { searchP
     where: { brandPageId: { in: brandIds } },
     select: {
       brandPageId: true, status: true, daysRunning: true, firstSeenAt: true, lastSeenAt: true, landingUrl: true, headline: true, countries: true,
-      brandPage: { select: { name: true, logoUrl: true, pageUrl: true, websiteDomain: true } }
+      brandPage: { select: { name: true, logoUrl: true, pageUrl: true, websiteDomain: true, contactEmails: true, contactPhones: true, contactSocials: true, contactCheckedAt: true } }
     },
     take: 20000
   }) : [];
@@ -48,6 +48,10 @@ export default async function StoppedAdvertisersPage({ searchParams }: { searchP
     brandLogoUrl: ad.brandPage?.logoUrl || null,
     brandPageUrl: ad.brandPage?.pageUrl || null,
     brandWebsite: ad.brandPage?.websiteDomain || null,
+    contactEmails: ad.brandPage?.contactEmails,
+    contactPhones: ad.brandPage?.contactPhones,
+    contactSocials: ad.brandPage?.contactSocials,
+    contactCheckedAt: ad.brandPage?.contactCheckedAt,
     status: ad.status,
     daysRunning: ad.daysRunning,
     firstSeenAt: ad.firstSeenAt,
@@ -63,7 +67,11 @@ export default async function StoppedAdvertisersPage({ searchParams }: { searchP
     return {
       ...advertiser,
       lastAdEndedAt: advertiser.lastAdEndedAt?.toISOString() || null,
+      contactCheckedAt: advertiser.contactCheckedAt?.toISOString() || null,
       website: locked ? null : advertiser.website,
+      emails: locked ? [] : advertiser.emails,
+      phones: locked ? [] : advertiser.phones,
+      socials: locked ? [] : advertiser.socials,
       brandPageUrl: locked ? null : advertiser.brandPageUrl,
       isLocked: locked
     };

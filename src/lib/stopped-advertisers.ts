@@ -8,6 +8,10 @@ export type StoppedSignalAd = {
   brandLogoUrl: string | null;
   brandPageUrl: string | null;
   brandWebsite: string | null;
+  contactEmails?: string[];
+  contactPhones?: string[];
+  contactSocials?: string[];
+  contactCheckedAt?: Date | null;
   status: string;
   daysRunning: number | null;
   firstSeenAt: Date | null;
@@ -29,13 +33,19 @@ export type StoppedAdvertiser = {
   daysSinceStopped: number | null;
   countries: string[];
   sampleHeadline: string | null;
+  emails: string[];
+  phones: string[];
+  socials: string[];
+  contactCheckedAt: Date | null;
   leadScore: number;
 };
 
 export function landingHost(url: string | null) {
   if (!url) return null;
   try {
-    const host = new URL(url).hostname.replace(/^www\./, "").toLowerCase();
+    const parsed = new URL(url);
+    const wrapped = /(^|\.)facebook\.com$/i.test(parsed.hostname) && parsed.pathname.startsWith("/l.php") ? parsed.searchParams.get("u") : null;
+    const host = new URL(wrapped || url).hostname.replace(/^www\./, "").toLowerCase();
     if (!host || /(^|\.)(facebook|fb|instagram|messenger|whatsapp|wa)\.(com|me)$/.test(host) || host === "l.facebook.com") return null;
     return host;
   } catch {
@@ -94,11 +104,19 @@ export function findStoppedAdvertisers(ads: StoppedSignalAd[], now = new Date())
       daysSinceStopped,
       countries: [...new Set(list.flatMap((ad) => ad.countries))].slice(0, 6),
       sampleHeadline: list.find((ad) => ad.headline)?.headline || null,
+      emails: first.contactEmails || [],
+      phones: first.contactPhones || [],
+      socials: first.contactSocials || [],
+      contactCheckedAt: first.contactCheckedAt || null,
       leadScore: Math.round(volume + recency + reachable + experience)
     });
   }
 
   return results.sort((left, right) => right.leadScore - left.leadScore || right.totalAds - left.totalAds);
+}
+
+export function outreachSubject(advertiser: Pick<StoppedAdvertiser, "brandName">) {
+  return `${advertiser.brandName} reklamları hakkında kısa bir soru`;
 }
 
 export function outreachMessage(advertiser: Pick<StoppedAdvertiser, "brandName" | "totalAds" | "daysSinceStopped">) {
@@ -122,7 +140,7 @@ function csvCell(value: unknown) {
 }
 
 export function stoppedAdvertisersCsv(rows: StoppedAdvertiser[]) {
-  const header = ["Marka", "Web sitesi", "Facebook sayfası", "Toplam reklam", "En uzun yayın (gün)", "Son reklam bitişi", "Durmuş (gün)", "Ülkeler", "Müşteri skoru"];
-  const lines = rows.map((row) => [row.brandName, row.website, row.brandPageUrl, row.totalAds, row.longestRunDays, row.lastAdEndedAt, row.daysSinceStopped, row.countries.join(" "), row.leadScore].map(csvCell).join(","));
+  const header = ["Marka", "Web sitesi", "E-posta", "Telefon", "Sosyal medya", "Facebook sayfası", "Toplam reklam", "En uzun yayın (gün)", "Son reklam bitişi", "Durmuş (gün)", "Ülkeler", "Müşteri skoru"];
+  const lines = rows.map((row) => [row.brandName, row.website, row.emails.join(" "), row.phones.join(" "), row.socials.join(" "), row.brandPageUrl, row.totalAds, row.longestRunDays, row.lastAdEndedAt, row.daysSinceStopped, row.countries.join(" "), row.leadScore].map(csvCell).join(","));
   return [header.join(","), ...lines].join("\n");
 }

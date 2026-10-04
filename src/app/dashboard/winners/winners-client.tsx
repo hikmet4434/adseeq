@@ -6,6 +6,8 @@ import { AdCreativeMedia } from "@/components/ad-creative-media";
 import { WINNER_TIER_LABELS, type WinnerScore, type WinnerTier } from "@/lib/winner-score";
 import type { WinningAdAnalysis } from "@/lib/openai-analysis";
 
+type LandingInfo = { url: string; title: string | null; description: string | null; headings: string[]; ctas: string[]; prices: string[]; offers: string[]; trustSignals: string[]; via: string };
+
 type Row = {
   id: string;
   brand: string | null;
@@ -45,6 +47,8 @@ function AnalysisPanel({ adId, canAnalyze }: { adId: string; canAnalyze: boolean
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [analysis, setAnalysis] = useState<WinningAdAnalysis | null>(null);
+  const [landing, setLanding] = useState<LandingInfo | null>(null);
+  const [landingError, setLandingError] = useState<string | null>(null);
 
   async function run() {
     setBusy(true); setError("");
@@ -53,6 +57,8 @@ function AnalysisPanel({ adId, canAnalyze }: { adId: string; canAnalyze: boolean
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "AI_ANALYSIS_FAILED");
       setAnalysis(data.data.analysis);
+      setLanding(data.data.landingPage || null);
+      setLandingError(data.data.landingError || null);
     } catch (caught) {
       const code = caught instanceof Error ? caught.message : "AI_ANALYSIS_FAILED";
       setError(ERRORS[code] || `Analiz başarısız: ${code}`);
@@ -66,7 +72,7 @@ function AnalysisPanel({ adId, canAnalyze }: { adId: string; canAnalyze: boolean
       {!analysis && (
         <div className="flex flex-wrap gap-2">
           <input value={market} onChange={(event) => setMarket(event.target.value)} placeholder="Hedef pazar (ör. Türkiye, Almanya)" className="min-w-0 flex-1 rounded-xl border border-slate-200 px-3 py-2 text-sm" />
-          <button type="button" onClick={run} disabled={busy} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{busy ? "Analiz ediliyor..." : "Neden kazandı + varyasyon üret"}</button>
+          <button type="button" onClick={run} disabled={busy} className="rounded-xl bg-slate-950 px-4 py-2 text-sm font-bold text-white disabled:opacity-50">{busy ? "Analiz ediliyor..." : "Neden kazandı + varyasyon + sayfa incelemesi"}</button>
         </div>
       )}
       {error && <p className="mt-2 text-sm font-semibold text-rose-600">{error}</p>}
@@ -105,6 +111,23 @@ function AnalysisPanel({ adId, canAnalyze }: { adId: string; canAnalyze: boolean
           <div>
             <div className="mb-1 text-xs font-black uppercase tracking-wide text-slate-500">Test planı</div>
             <ol className="list-decimal space-y-1 pl-5 text-slate-700">{analysis.testPlan.map((item) => <li key={item}>{item}</li>)}</ol>
+          </div>
+          <div className="rounded-2xl border border-sky-100 bg-sky-50/50 p-3">
+            <div className="mb-1 text-xs font-black uppercase tracking-wide text-sky-800">Hedef sayfa incelemesi</div>
+            {landing ? (
+              <div className="mb-2 space-y-1 text-xs text-slate-600">
+                <a href={landing.url} target="_blank" rel="noreferrer noopener" className="block truncate font-bold text-sky-800">{landing.title || landing.url} ↗</a>
+                {landing.headings.length > 0 && <div><b>Başlıklar:</b> {landing.headings.slice(0, 4).join(" · ")}</div>}
+                {landing.ctas.length > 0 && <div><b>Butonlar:</b> {landing.ctas.join(" · ")}</div>}
+                {landing.prices.length > 0 && <div><b>Fiyatlar:</b> {landing.prices.join(" · ")}</div>}
+                {landing.offers.length > 0 && <div><b>Teklifler:</b> {landing.offers.join(" · ")}</div>}
+                <div><b>Güven sinyalleri:</b> {landing.trustSignals.length ? landing.trustSignals.join(" · ") : "bulunamadı"}</div>
+              </div>
+            ) : <p className="mb-2 text-xs text-slate-500">{landingError ? `Hedef sayfa açılamadı (${landingError}).` : "Bu reklamın hedef sayfası yok."}</p>}
+            <p className="text-slate-800">{analysis.landingPageReview.summary}</p>
+            {analysis.landingPageReview.strengths.length > 0 && <div className="mt-2"><b className="text-emerald-700">Güçlü:</b><ul className="list-disc pl-5 text-slate-700">{analysis.landingPageReview.strengths.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+            {analysis.landingPageReview.weaknesses.length > 0 && <div className="mt-2"><b className="text-rose-700">Zayıf:</b><ul className="list-disc pl-5 text-slate-700">{analysis.landingPageReview.weaknesses.map((item) => <li key={item}>{item}</li>)}</ul></div>}
+            {analysis.landingPageReview.fixes.length > 0 && <div className="mt-2"><b className="text-sky-800">Kendi sayfanda uygula:</b><ul className="list-disc pl-5 text-slate-700">{analysis.landingPageReview.fixes.map((item) => <li key={item}>{item}</li>)}</ul></div>}
           </div>
         </div>
       )}

@@ -223,6 +223,12 @@ model BrandPage {
   country        String?
   niche          String?
   storeId        String?
+  // Reklamı durmuş marka için bulunan iletişim bilgileri (web sitesinden ya da Apify'dan).
+  contactEmails    String[]  @default([])
+  contactPhones    String[]  @default([])
+  contactSocials   String[]  @default([])
+  contactSource    String?
+  contactCheckedAt DateTime?
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
