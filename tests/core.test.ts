@@ -208,3 +208,59 @@ test("dönüşüm bulucu ürünleri gruplar ve düşük maliyet endeksini öne a
   assert.equal(ranked[0].band === "COK_DUSUK" || ranked[0].band === "DUSUK", true);
   assert.equal(ranked[1].band === "ORTA" || ranked[1].band === "YUKSEK", true);
 });
+
+import { rankWinners, scoreWinner } from "../src/lib/winner-score";
+import { findStoppedAdvertisers, landingHost, outreachMessage, stoppedAdvertisersCsv } from "../src/lib/stopped-advertisers";
+import { classifyAccountAds, normalizeAdAccountId } from "../src/lib/meta-account";
+
+test("uzun süredir aktif, çok varyasyonlu ve çok platformlu reklam kazanan sayılır", () => {
+  const winner = scoreWinner({ id: "a", brandPageId: "b", status: "ACTIVE", daysRunning: 120, headline: "Halı yıkama", primaryText: null, landingUrl: null, raw: { publisherPlatforms: ["facebook", "instagram", "messenger", "audience_network"] } }, 6);
+  assert.equal(winner.tier, "KAZANAN");
+  assert.equal(winner.score, 100);
+  const loser = scoreWinner({ id: "c", brandPageId: "b", status: "INACTIVE", daysRunning: 3, headline: "Deneme", primaryText: null, landingUrl: null });
+  assert.equal(loser.tier, "TEST");
+});
+
+test("aynı markanın aynı mesajlı reklamları varyasyon olarak sayılır", () => {
+  const base = { brandPageId: "b", status: "ACTIVE", daysRunning: 30, primaryText: null, landingUrl: null };
+  const ranked = rankWinners([
+    { ...base, id: "1", headline: "Turn any picture to video" },
+    { ...base, id: "2", headline: "Turn any picture to video!" },
+    { ...base, id: "3", headline: "Başka mesaj" }
+  ]);
+  assert.equal(ranked.find((item) => item.ad.id === "1")?.winner.variantCount, 2);
+  assert.equal(ranked.find((item) => item.ad.id === "3")?.winner.variantCount, 1);
+});
+
+test("hiç aktif reklamı kalmamış marka reklamı durmuş sayılır", () => {
+  const now = new Date("2026-10-01T00:00:00Z");
+  const ad = { brandName: "Çağrı Market", brandLogoUrl: null, brandPageUrl: "https://facebook.com/x", brandWebsite: null, daysRunning: 40, firstSeenAt: null, headline: "İndirim", countries: ["TR"] };
+  const results = findStoppedAdvertisers([
+    { ...ad, brandPageId: "stopped", status: "INACTIVE", lastSeenAt: new Date("2026-09-21T00:00:00Z"), landingUrl: "https://www.cagrimarket.com/urun" },
+    { ...ad, brandPageId: "stopped", status: "INACTIVE", lastSeenAt: new Date("2026-08-01T00:00:00Z"), landingUrl: "https://facebook.com/x" },
+    { ...ad, brandPageId: "running", status: "ACTIVE", lastSeenAt: null, landingUrl: null },
+    { ...ad, brandPageId: "running", status: "INACTIVE", lastSeenAt: null, landingUrl: null }
+  ], now);
+  assert.equal(results.length, 1);
+  assert.equal(results[0]!.brandPageId, "stopped");
+  assert.equal(results[0]!.website, "cagrimarket.com");
+  assert.equal(results[0]!.daysSinceStopped, 10);
+  assert.equal(landingHost("https://l.facebook.com/abc"), null);
+  assert.match(outreachMessage(results[0]!), /2 reklamınızı/);
+  assert.match(stoppedAdvertisersCsv(results), /cagrimarket\.com/);
+});
+
+test("Meta hesap reklamları hesap ortalamasına göre sınıflandırılır", () => {
+  assert.equal(normalizeAdAccountId("123456789"), "act_123456789");
+  assert.equal(normalizeAdAccountId("act_abc"), null);
+  const rows = classifyAccountAds([
+    { ad_id: "1", ad_name: "Kazanan", spend: "100", impressions: "10000", clicks: "300", actions: [{ action_type: "purchase", value: "10" }], action_values: [{ action_type: "purchase", value: "400" }] },
+    { ad_id: "2", ad_name: "Orta", spend: "100", impressions: "10000", clicks: "150", actions: [{ action_type: "purchase", value: "5" }], action_values: [{ action_type: "purchase", value: "150" }] },
+    { ad_id: "3", ad_name: "Yakan", spend: "100", impressions: "10000", clicks: "50", actions: [], action_values: [] },
+    { ad_id: "4", ad_name: "Yeni", spend: "2", impressions: "200", clicks: "3" }
+  ]);
+  const verdict = (id: string) => rows.find((row) => row.adId === id)?.verdict;
+  assert.equal(verdict("1"), "TUTUYOR");
+  assert.equal(verdict("3"), "TUTMUYOR");
+  assert.equal(verdict("4"), "VERI_AZ");
+});

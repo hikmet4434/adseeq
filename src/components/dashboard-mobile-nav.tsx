@@ -5,9 +5,9 @@ import { useState } from "react";
 import { useT } from "@/lib/i18n";
 
 const items = [
-  ["Ads", "/dashboard/ads"], ["Stores", "/dashboard/stores"], ["Store Tracker", "/dashboard/store-tracker"],
+  ["Ads", "/dashboard/ads"], ["Kazananlar", "/dashboard/winners"], ["Stores", "/dashboard/stores"], ["Store Tracker", "/dashboard/store-tracker"],
   ["Saved Ads", "/dashboard/saved-ads"], ["TikTok Shop", "/dashboard/tiktok-shop"], ["Magic AI", "/dashboard/magic-ai"],
-  ["Trends", "/dashboard/trends"], ["Ucuz Dönüşüm", "/dashboard/conversion-finder"], ["Brand Tracker", "/dashboard/brand-tracker"], ["Account", "/dashboard/account"]
+  ["Trends", "/dashboard/trends"], ["Ucuz Dönüşüm", "/dashboard/conversion-finder"], ["Brand Tracker", "/dashboard/brand-tracker"], ["Durmuş Reklamverenler", "/dashboard/stopped-advertisers"], ["Meta Hesabım", "/dashboard/my-meta"], ["Account", "/dashboard/account"]
 ];
 
 export function DashboardMobileNav({ isAdmin }: { isAdmin: boolean }) {
