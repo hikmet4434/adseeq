@@ -6,6 +6,7 @@ import { planFromUser } from "@/lib/plans";
 import { hizSiniriAsimi } from "@/lib/rate-limit";
 import { analyzeWinningAd } from "@/lib/openai-analysis";
 import { scoreWinner, variantKey } from "@/lib/winner-score";
+import { LandingPageSummary, fetchPublicPage, summarizeLandingPage } from "@/lib/web-page";
 
 const schema = z.object({ targetMarket: z.string().trim().max(80).optional() });
 
@@ -30,6 +31,14 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const familySize = key ? siblings.filter((sibling) => variantKey(sibling) === key).length : 1;
   const winner = scoreWinner(ad, familySize);
 
+  // Hedef sayfa açılamazsa analiz yine yapılır; sadece sayfa yorumu boş kalır.
+  let landingPage: LandingPageSummary | null = null;
+  let landingError: string | null = null;
+  if (ad.landingUrl && /^https?:\/\//i.test(ad.landingUrl)) {
+    try { landingPage = summarizeLandingPage(await fetchPublicPage(ad.landingUrl)); }
+    catch (error) { landingError = error instanceof Error ? error.message : "PAGE_FETCH_FAILED"; }
+  }
+
   try {
     const result = await analyzeWinningAd({
       brand: ad.brandPage?.name || null,
@@ -45,11 +54,12 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
       platforms: winner.platforms,
       countries: ad.countries,
       winnerScore: winner.score,
-      targetMarket: parsed.data.targetMarket || null
+      targetMarket: parsed.data.targetMarket || null,
+      landingPage: landingPage && { url: landingPage.url, title: landingPage.title, description: landingPage.description, headings: landingPage.headings, ctas: landingPage.ctas, prices: landingPage.prices, offers: landingPage.offers, trustSignals: landingPage.trustSignals, excerpt: landingPage.excerpt }
     });
     const { model, ...analysis } = result;
     await prisma.aiAnalysis.create({ data: { userId: user.id, query: `winner:${ad.id}`, provider: "openai", model, summary: analysis.verdict, insights: analysis as never } });
-    return NextResponse.json({ data: { winner, analysis } });
+    return NextResponse.json({ data: { winner, analysis, landingPage: landingPage && { ...landingPage, excerpt: undefined }, landingError } });
   } catch (error) {
     const code = error instanceof Error && /^(OPENAI_[A-Z0-9_]+)$/.test(error.message) ? error.message : "AI_ANALYSIS_FAILED";
     return NextResponse.json({ error: code }, { status: code === "OPENAI_NOT_CONFIGURED" ? 503 : 502 });

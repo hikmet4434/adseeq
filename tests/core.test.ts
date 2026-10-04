@@ -264,3 +264,31 @@ test("Meta hesap reklamları hesap ortalamasına göre sınıflandırılır", ()
   assert.equal(verdict("3"), "TUTMUYOR");
   assert.equal(verdict("4"), "VERI_AZ");
 });
+
+import { extractContacts, summarizeLandingPage, unwrapRedirectUrl } from "../src/lib/web-page";
+
+test("web sitesinden e-posta, telefon, sosyal medya ve iletişim sayfası çıkarılır", () => {
+  const html = `<a href="mailto:info@cagrihali.com?subject=x">Yaz</a> <a href="tel:+90 532 111 22 33">Ara</a>
+    <a href="https://www.instagram.com/cagrihali/">IG</a> <a href="https://facebook.com/sharer/sharer.php?u=x">paylaş</a>
+    <a href="/iletisim">İletişim</a> logo@2x.png destek@cagrihali.com test@example.com`;
+  const links = ["mailto:info@cagrihali.com?subject=x", "tel:+90 532 111 22 33", "https://www.instagram.com/cagrihali/", "https://facebook.com/sharer/sharer.php?u=x", "https://cagrihali.com/iletisim"];
+  const contacts = extractContacts(html, links, "https://www.cagrihali.com");
+  assert.deepEqual(contacts.emails.sort(), ["destek@cagrihali.com", "info@cagrihali.com"]);
+  assert.deepEqual(contacts.phones, ["+905321112233"]);
+  assert.deepEqual(contacts.socials, ["https://www.instagram.com/cagrihali"]);
+  assert.deepEqual(contacts.contactPages, ["https://cagrihali.com/iletisim"]);
+});
+
+test("hedef sayfadan başlık, buton, fiyat, teklif ve güven sinyalleri çıkarılır", () => {
+  const html = `<html><head><title>Halı Yıkama</title><meta name="description" content="Kapıdan alım"></head><body>
+    <h1>İstanbul'da halı yıkama</h1><h2>Ücretsiz kargo ile kapıdan alım</h2><button>Hemen Randevu Al</button>
+    <p>Metrekaresi 45 TL. Müşteri yorumları ★★★★★ Memnuniyet garantisi</p></body></html>`;
+  const summary = summarizeLandingPage({ url: "https://x.com", html, text: "İstanbul'da halı yıkama Ücretsiz kargo ile kapıdan alım Metrekaresi 45 TL. Müşteri yorumları ★★★★★ Memnuniyet garantisi", links: [], title: "Halı Yıkama", description: "Kapıdan alım", via: "direct" });
+  assert.equal(summary.headings[0], "İstanbul'da halı yıkama");
+  assert.deepEqual(summary.ctas, ["Hemen Randevu Al"]);
+  assert.deepEqual(summary.prices, ["45 TL"]);
+  assert.ok(summary.offers.includes("Ücretsiz kargo"));
+  assert.ok(summary.trustSignals.includes("Müşteri yorumları") && summary.trustSignals.includes("Garanti"));
+  assert.equal(unwrapRedirectUrl("https://l.facebook.com/l.php?u=https%3A%2F%2Fshop.com%2Fp&h=1"), "https://shop.com/p");
+  assert.equal(landingHost("https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.shop.com%2Fp"), "shop.com");
+});

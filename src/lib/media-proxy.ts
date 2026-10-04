@@ -26,8 +26,9 @@ export function isSafeMediaHostname(hostname: string) {
   return true;
 }
 
-async function assertPublicTarget(url: URL) {
-  if (url.protocol !== "https:" || !isSafeMediaHostname(url.hostname)) throw new Error("UNSAFE_MEDIA_URL");
+export async function assertPublicTarget(url: URL, allowHttp = false) {
+  const protocolOk = url.protocol === "https:" || (allowHttp && url.protocol === "http:");
+  if (!protocolOk || !isSafeMediaHostname(url.hostname)) throw new Error("UNSAFE_MEDIA_URL");
   const addresses = await lookup(url.hostname, { all: true, verbatim: true });
   if (!addresses.length || addresses.some(({ address, family }) => family === 4 ? isPrivateIpv4(address) : isPrivateIpv6(address))) {
     throw new Error("UNSAFE_MEDIA_URL");

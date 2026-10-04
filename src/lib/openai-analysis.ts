@@ -87,6 +87,7 @@ export type WinningAdInput = {
   countries: string[];
   winnerScore: number;
   targetMarket: string | null;
+  landingPage: { url: string; title: string | null; description: string | null; headings: string[]; ctas: string[]; prices: string[]; offers: string[]; trustSignals: string[]; excerpt: string } | null;
 };
 
 export type WinningAdAnalysis = {
@@ -97,6 +98,7 @@ export type WinningAdAnalysis = {
   audience: string;
   variations: Array<{ title: string; hook: string; headline: string; primaryText: string; visualIdea: string; market: string }>;
   testPlan: string[];
+  landingPageReview: { summary: string; strengths: string[]; weaknesses: string[]; fixes: string[] };
 };
 
 const winningAdSchema = {
@@ -126,14 +128,25 @@ const winningAdSchema = {
         required: ["title", "hook", "headline", "primaryText", "visualIdea", "market"]
       }
     },
-    testPlan: { type: "array", minItems: 2, maxItems: 5, items: { type: "string" } }
+    testPlan: { type: "array", minItems: 2, maxItems: 5, items: { type: "string" } },
+    landingPageReview: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        summary: { type: "string" },
+        strengths: { type: "array", maxItems: 5, items: { type: "string" } },
+        weaknesses: { type: "array", maxItems: 5, items: { type: "string" } },
+        fixes: { type: "array", maxItems: 5, items: { type: "string" } }
+      },
+      required: ["summary", "strengths", "weaknesses", "fixes"]
+    }
   },
-  required: ["verdict", "whyItWins", "hook", "offer", "audience", "variations", "testPlan"]
+  required: ["verdict", "whyItWins", "hook", "offer", "audience", "variations", "testPlan", "landingPageReview"]
 };
 
 export async function analyzeWinningAd(ad: WinningAdInput): Promise<WinningAdAnalysis & { model: string }> {
   const { data, model } = await openAiJson<WinningAdAnalysis>(
-    "Sen performans reklamcılığı uzmanısın. Sana Meta reklam kütüphanesinden bir reklam ve herkese açık sinyalleri (yayın süresi, aktiflik, varyasyon sayısı, platformlar) veriliyor. Uzun süre yayında kalan ve çok varyasyonu olan reklam para kazandırıyor demektir. Görevin: 1) reklamın neden tuttuğunu (ya da tutmadığını) metin, kanca (hook), teklif, CTA ve hedef kitle açısından açıklamak, 2) aynı kazanan kalıbı koruyarak sıfırdan değil, bu reklamın 3-5 varyasyonunu yazmak (farklı kanca, farklı kitle, gerekirse farklı pazar/kültüre uyarlanmış görsel fikri), 3) kısa bir A/B test planı vermek. Türkçe yaz. Verilmeyen veriyi uydurma; satış rakamı tahmin etme. Varyasyon metinleri doğrudan kullanılabilir reklam metni olsun. targetMarket verilmişse varyasyonları o pazara uyarla.",
+    "Sen performans reklamcılığı uzmanısın. Sana Meta reklam kütüphanesinden bir reklam ve herkese açık sinyalleri (yayın süresi, aktiflik, varyasyon sayısı, platformlar) veriliyor. Uzun süre yayında kalan ve çok varyasyonu olan reklam para kazandırıyor demektir. Görevin: 1) reklamın neden tuttuğunu (ya da tutmadığını) metin, kanca (hook), teklif, CTA ve hedef kitle açısından açıklamak, 2) aynı kazanan kalıbı koruyarak sıfırdan değil, bu reklamın 3-5 varyasyonunu yazmak (farklı kanca, farklı kitle, gerekirse farklı pazar/kültüre uyarlanmış görsel fikri), 3) kısa bir A/B test planı vermek. Türkçe yaz. Verilmeyen veriyi uydurma; satış rakamı tahmin etme. Varyasyon metinleri doğrudan kullanılabilir reklam metni olsun. targetMarket verilmişse varyasyonları o pazara uyarla. landingPage verilmişse reklamın tıklayanı gönderdiği hedef sayfayı da incele: reklam vaadiyle sayfa uyumlu mu, fiyat/teklif net mi, CTA güçlü mü, güven sinyalleri (yorum, garanti, iade, kargo) var mı; landingPageReview alanında güçlü yönleri, zayıf yönleri ve kendi sayfamızda uygulanacak somut düzeltmeleri yaz. landingPage null ise landingPageReview.summary alanına 'Hedef sayfa incelenemedi' yaz ve listeleri boş bırak.",
     ad, "winning_ad_analysis", winningAdSchema, 3200
   );
   if (!Array.isArray(data.variations) || !Array.isArray(data.whyItWins)) throw new Error("OPENAI_INVALID_RESPONSE");
