@@ -16,7 +16,7 @@ export function DashboardLayoutClient({ user, nav, children }: {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <Link href="/dashboard/ads"><BrandLogo markClassName="h-8 w-8" /></Link>
           <DashboardMobileNav isAdmin={user.role === "ADMIN"} />
-          <nav className="hidden gap-1 lg:flex">
+          <nav className="hidden flex-wrap justify-center gap-1 lg:flex">
             {nav.map(([label, href]) => (
               <Link key={label} href={href} className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100">
                 {label}

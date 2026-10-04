@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 
 const nav: [string, string][] = [
   ["Ads", "/dashboard/ads"],
+  ["Kazananlar", "/dashboard/winners"],
   ["Stores", "/dashboard/stores"],
   ["Store Tracker", "/dashboard/store-tracker"],
   ["Saved Ads", "/dashboard/saved-ads"],
@@ -19,7 +20,9 @@ const nav: [string, string][] = [
   ["Magic AI", "/dashboard/magic-ai"],
   ["Trends", "/dashboard/trends"],
   ["Ucuz Dönüşüm", "/dashboard/conversion-finder"],
-  ["Brand Tracker", "/dashboard/brand-tracker"]
+  ["Brand Tracker", "/dashboard/brand-tracker"],
+  ["Durmuş Reklamverenler", "/dashboard/stopped-advertisers"],
+  ["Meta Hesabım", "/dashboard/my-meta"]
 ];
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
