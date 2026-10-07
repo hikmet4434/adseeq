@@ -292,3 +292,14 @@ test("hedef sayfadan başlık, buton, fiyat, teklif ve güven sinyalleri çıkar
   assert.equal(unwrapRedirectUrl("https://l.facebook.com/l.php?u=https%3A%2F%2Fshop.com%2Fp&h=1"), "https://shop.com/p");
   assert.equal(landingHost("https://l.facebook.com/l.php?u=https%3A%2F%2Fwww.shop.com%2Fp"), "shop.com");
 });
+
+import { isExpiredSignedUrl } from "../src/lib/media-proxy";
+
+test("süresi dolmuş Meta CDN bağlantısı tanınır", () => {
+  const now = Date.UTC(2026, 9, 4);
+  const past = Math.floor((now - 86_400_000) / 1000).toString(16);
+  const future = Math.floor((now + 86_400_000) / 1000).toString(16);
+  assert.equal(isExpiredSignedUrl(`https://video.fist1-1.fna.fbcdn.net/v/t42/x.mp4?_nc_cat=1&oh=00_abc&oe=${past}`, now), true);
+  assert.equal(isExpiredSignedUrl(`https://video.fist1-1.fna.fbcdn.net/v/t42/x.mp4?oe=${future}`, now), false);
+  assert.equal(isExpiredSignedUrl("https://cdn.example.com/video.mp4", now), false);
+});

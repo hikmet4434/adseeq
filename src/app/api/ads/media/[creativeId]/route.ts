@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/db";
-import { fetchMedia } from "@/lib/media-proxy";
+import { fetchMedia, isExpiredSignedUrl } from "@/lib/media-proxy";
 import { hizSiniriAsimi } from "@/lib/rate-limit";
 
 export async function GET(request: Request, context: { params: Promise<{ creativeId: string }> }) {
@@ -14,11 +14,14 @@ export async function GET(request: Request, context: { params: Promise<{ creativ
   const creative = await prisma.adCreative.findUnique({ where: { id: creativeId }, select: { url: true, type: true } });
   if (!creative || creative.type !== "VIDEO") return NextResponse.json({ error: "MEDIA_NOT_FOUND" }, { status: 404 });
 
+  if (isExpiredSignedUrl(creative.url)) return NextResponse.json({ error: "MEDIA_EXPIRED" }, { status: 410 });
+
   try {
     const upstream = await fetchMedia(creative.url, request.headers.get("range"));
     if (!upstream.ok && upstream.status !== 206) {
       await upstream.body?.cancel();
-      return NextResponse.json({ error: "MEDIA_UNAVAILABLE" }, { status: 502 });
+      const expired = upstream.status === 403 || upstream.status === 404 || upstream.status === 410;
+      return NextResponse.json({ error: expired ? "MEDIA_EXPIRED" : "MEDIA_UNAVAILABLE" }, { status: expired ? 410 : 502 });
     }
 
     const headers = new Headers({

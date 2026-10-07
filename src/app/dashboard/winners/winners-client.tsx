@@ -179,7 +179,7 @@ export function WinnersClient({ q, country, tier, countries, rows, counts, total
             {row.isLocked && <div className="absolute inset-0 z-10 grid place-items-center bg-white/70 backdrop-blur-[2px]"><Link href="/pricing" className="rounded-2xl bg-violet-700 px-5 py-3 font-black text-white">Tüm kazananları aç</Link></div>}
             <div className={row.isLocked ? "locked-blur" : ""}>
               <div className="flex gap-4">
-                <AdCreativeMedia creative={row.creative} className="h-32 w-32 shrink-0 rounded-2xl object-cover" />
+                <AdCreativeMedia creative={row.creative} adLibraryUrl={row.adLibraryUrl} className="h-32 w-32 shrink-0 rounded-2xl object-cover" />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
                     <span className={`rounded-full px-3 py-1 text-xs font-black ${TIER_STYLES[row.winner.tier]}`}>{WINNER_TIER_LABELS[row.winner.tier]}</span>
