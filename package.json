@@ -15,7 +15,8 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:studio": "prisma studio",
     "backup": "sh scripts/backup-postgres.sh",
-    "health:check": "sh scripts/monitor-health.sh"
+    "health:check": "sh scripts/monitor-health.sh",
+    "test:subscriber-summary": "node --import tsx --experimental-test-module-mocks --test tests/subscriber-summary.test.mts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"
