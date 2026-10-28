@@ -48,6 +48,8 @@ export async function GET(req: Request) {
 
   const email = (profile.email || "").trim().toLowerCase();
   if (!email) return redirectToLogin("GOOGLE_EMAIL_REQUIRED");
+  // Email linking must use a verified Google address, never an unverified claim.
+  if (profile.email_verified !== true) return redirectToLogin("GOOGLE_EMAIL_UNVERIFIED");
 
   const isAdmin = isConfiguredAdminEmail(email);
   const plan = await prisma.plan.findUnique({ where: { code: isAdmin ? "PREMIUM" : "FREE" } });
