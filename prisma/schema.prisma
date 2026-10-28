@@ -761,3 +761,30 @@ model AdminAuditLog {
   @@index([targetType, targetId])
   @@index([createdAt])
 }
+
+
+// Independent of disposable AuthSession/User rows: intentionally no foreign keys.
+// AuthSession insert trigger writes both in the same database transaction.
+model AboneSessionEvent {
+  eventId String @id @map("event_id")
+  actorId String @map("actor_id")
+  at DateTime @db.Timestamptz(3)
+  excluded Boolean @default(false)
+
+  @@index([at], map: "abone_session_events_at_idx")
+  @@map("abone_session_events")
+}
+
+// Evidence starts at installation; this is never a historical completeness claim.
+model AboneSessionCoverage {
+  id Int @id @default(1)
+  installedAt DateTime @map("installed_at") @db.Timestamptz(3)
+  authSourceSha256 String @map("auth_source_sha256")
+  authSourceRevision String @map("auth_source_revision")
+  writerMd5 String @map("writer_md5")
+  triggerMd5 String @map("trigger_md5")
+  auditWindowDays Int @default(32) @map("audit_window_days")
+  evidenceKind String @default("session_persisted") @map("evidence_kind")
+
+  @@map("abone_session_coverage")
+}

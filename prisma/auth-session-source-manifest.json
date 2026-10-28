@@ -1,0 +1,14 @@
+{
+  "authSourceRevision": "ebbebb87147a6ee1241a22f95753ff9c0929d811",
+  "authSourceSha256": "71eef4e45acf6b5e0d93d6e8e385c71a3561118326d1792bfecce91c180e1787",
+  "files": {
+    "src/lib/auth/session.ts": "9c13ee1fc06f0d4a87e0dd3cc83b868fa101c2576b6ee69b480648803c90ee77",
+    "src/app/api/auth/login/route.ts": "16d878361c1884eca5f6ae6c0867316810b11fa1a6017db25e5d73f2b24a1cd4",
+    "src/app/api/auth/register/route.ts": "eb12ba62584bf0cd14aad6faa8009cbd1a30f130e8f47d73f10535ed642fa51a",
+    "src/app/api/auth/google/callback/route.ts": "47b6c09ac347f8097632f64edd56df499ea6d2f9287c6b48455601c6beed6ff9",
+    "src/lib/auth/google.ts": "82ca0884084194b2eab6140b90be1815fa6ba6fa7d5a28e84b27cc7b4c2fd1c3",
+    "src/lib/auth/crypto.ts": "2b174ab7b28068b30dd7a2edb086025a4fe343a36e536e36657f61a0b05e821b",
+    "src/lib/admin-emails.ts": "9ed547d821f983016aa8abb63b1f4b05e1a5fec84dde87c7dedb08603be498d8"
+  },
+  "definition": "sha256(concat(UTF8(path),NUL,file_bytes,NUL) in listed order)"
+}
