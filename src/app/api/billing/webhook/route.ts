@@ -21,7 +21,7 @@ async function syncSubscription(subscription: Stripe.Subscription, forceCanceled
   // Incomplete checkouts have not been paid yet; never grant a paid plan or clobber active state.
   if (effectiveStatus === "incomplete") return;
 
-  let userId = subscription.metadata?.userId;
+  let userId: string | undefined = subscription.metadata?.userId;
   if (!userId) {
     const existing = await prisma.subscription.findFirst({
       where: { providerSubscriptionId: subscription.id },
