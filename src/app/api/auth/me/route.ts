@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { currentUser } from "@/lib/auth/current-user";
+import { planFromUser } from "@/lib/plans";
 
 export async function GET() {
   const user = await currentUser();
@@ -10,7 +11,7 @@ export async function GET() {
       email: user.email,
       name: user.name,
       role: user.role,
-      plan: user.subscription?.plan.code,
+      plan: planFromUser(user as never).code,
       creditBalance: user.creditBalance
     }
   });

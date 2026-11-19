@@ -1,9 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { MediaType } from "@prisma/client";
+import { MediaType, PlanCode, SubscriptionStatus } from "@prisma/client";
 import { actorInput, normalizeApifyAd, selectMediaRecordsForSearch } from "../src/lib/apify";
 import { adSearchDatabaseTerms, adSearchRelevance, filterRelevantAds } from "../src/lib/ad-search";
-import { getFeatureLimit } from "../src/lib/plans";
+import { getFeatureLimit, hasPaidPlan, isSubscriptionActive, planFromUser } from "../src/lib/plans";
 import { istemciIp, hizSiniriAsimi } from "../src/lib/rate-limit";
 import { stripePriceFor } from "../src/lib/stripe";
 import { tikTokActorInput } from "../src/lib/apify-tiktok";
@@ -302,4 +302,32 @@ test("süresi dolmuş Meta CDN bağlantısı tanınır", () => {
   assert.equal(isExpiredSignedUrl(`https://video.fist1-1.fna.fbcdn.net/v/t42/x.mp4?_nc_cat=1&oh=00_abc&oe=${past}`, now), true);
   assert.equal(isExpiredSignedUrl(`https://video.fist1-1.fna.fbcdn.net/v/t42/x.mp4?oe=${future}`, now), false);
   assert.equal(isExpiredSignedUrl("https://cdn.example.com/video.mp4", now), false);
+});
+
+test("planFromUser yalnızca aktif/deneme ve süresi dolmamış aboneliklerde ücretli plan döndürür", () => {
+  const now = new Date("2026-11-19T12:00:00Z");
+  const paidPlan = {
+    id: "plan-pro",
+    code: PlanCode.PREMIUM,
+    name: "Premium",
+    monthlyPriceEur: 212,
+    quarterlyPriceEur: 541,
+    yearlyPriceEur: 1526,
+    description: null,
+    features: { adsSearchDaily: 2000, apiCreditsMonthly: 20000 },
+    isActive: true,
+    sortOrder: 3,
+    createdAt: now,
+    updatedAt: now
+  };
+  assert.equal(planFromUser({ subscription: null }, now).code, PlanCode.FREE);
+  assert.equal(planFromUser({ subscription: { status: SubscriptionStatus.ACTIVE, currentPeriodEnd: null, plan: paidPlan } }, now).code, PlanCode.PREMIUM);
+  assert.equal(planFromUser({ subscription: { status: SubscriptionStatus.TRIALING, currentPeriodEnd: new Date("2026-11-20T00:00:00Z"), plan: paidPlan } }, now).code, PlanCode.PREMIUM);
+  assert.equal(planFromUser({ subscription: { status: SubscriptionStatus.ACTIVE, currentPeriodEnd: new Date("2026-11-18T00:00:00Z"), plan: paidPlan } }, now).code, PlanCode.FREE);
+  assert.equal(planFromUser({ subscription: { status: SubscriptionStatus.PAST_DUE, currentPeriodEnd: new Date("2026-12-01T00:00:00Z"), plan: paidPlan } }, now).code, PlanCode.FREE);
+  assert.equal(planFromUser({ subscription: { status: SubscriptionStatus.CANCELED, currentPeriodEnd: new Date("2026-12-01T00:00:00Z"), plan: paidPlan } }, now).code, PlanCode.FREE);
+  assert.equal(planFromUser({ subscription: { status: SubscriptionStatus.EXPIRED, currentPeriodEnd: null, plan: paidPlan } }, now).code, PlanCode.FREE);
+  assert.equal(isSubscriptionActive({ status: SubscriptionStatus.CANCELED, currentPeriodEnd: new Date("2026-12-01T00:00:00Z"), plan: paidPlan }, now), false);
+  assert.equal(hasPaidPlan({ role: "USER", subscription: { status: SubscriptionStatus.CANCELED, currentPeriodEnd: new Date("2026-12-01T00:00:00Z"), plan: paidPlan } }, now), false);
+  assert.equal(hasPaidPlan({ role: "ADMIN", subscription: null }, now), true);
 });

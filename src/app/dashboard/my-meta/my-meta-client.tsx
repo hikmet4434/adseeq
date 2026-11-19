@@ -24,12 +24,14 @@ const ERRORS: Record<string, string> = {
   INVALID_AD_ACCOUNT: "Reklam hesabı kimliği sadece rakamlardan oluşmalı (act_ öneki isteğe bağlı).",
   INVALID_INPUT: "Alanları kontrol edin.",
   META_TIMEOUT: "Meta zamanında yanıt vermedi, tekrar deneyin.",
+  PLAN_REQUIRED: "Yapay zekâ yorumu ücretli planlarda açık.",
+  API_CREDITS_EXCEEDED: "Aylık API kredi limitine ulaşıldı.",
   OPENAI_NOT_CONFIGURED: "Yapay zekâ servisi yapılandırılmamış (OPENAI_API_KEY eksik)."
 };
 
 const money = (value: number | null) => value === null ? "—" : value.toLocaleString("tr-TR", { maximumFractionDigits: 2 });
 
-export function MyMetaClient() {
+export function MyMetaClient({ canUseAi = true }: { canUseAi?: boolean }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Result | null>(null);
@@ -87,7 +89,7 @@ export function MyMetaClient() {
           <label className="text-sm font-semibold text-slate-700">Sektör / anahtar kelime (rakip karşılaştırması için)
             <input name="niche" placeholder="ör. halı yıkama" className="mt-1 w-full rounded-2xl border border-slate-200 px-4 py-3 font-normal" />
           </label>
-          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input name="withAi" type="checkbox" defaultChecked className="h-4 w-4" /> Yapay zekâ ile yorumla ve rakiplerle karşılaştır</label>
+          <label className="flex items-center gap-2 text-sm font-semibold text-slate-700"><input name="withAi" type="checkbox" defaultChecked={canUseAi} disabled={!canUseAi} className="h-4 w-4" /> Yapay zekâ ile yorumla ve rakiplerle karşılaştır{!canUseAi ? " (ücretli plan)" : ""}</label>
           <button disabled={busy} className="rounded-2xl bg-slate-950 px-4 py-3 font-bold text-white disabled:opacity-50">{busy ? "Reklamlar çekiliyor..." : "Reklamlarımı analiz et"}</button>
         </form>
         {error && <p className="mt-3 text-sm font-semibold text-rose-600">{error}</p>}

@@ -33,6 +33,7 @@ const TIER_STYLES: Record<WinnerTier, string> = {
 
 const ERRORS: Record<string, string> = {
   PLAN_REQUIRED: "Yapay zekâ analizi ücretli planlarda açık.",
+  API_CREDITS_EXCEEDED: "Aylık API kredi limitine ulaşıldı.",
   OPENAI_NOT_CONFIGURED: "Yapay zekâ servisi henüz yapılandırılmamış (OPENAI_API_KEY eksik).",
   OPENAI_TIMEOUT: "Yapay zekâ zamanında yanıt vermedi, tekrar deneyin.",
   RATE_LIMITED: "Çok fazla istek gönderildi, biraz bekleyin."

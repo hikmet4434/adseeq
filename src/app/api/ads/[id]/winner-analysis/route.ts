@@ -2,12 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { currentUser } from "@/lib/auth/current-user";
-import { planFromUser } from "@/lib/plans";
+import { hasPaidPlan } from "@/lib/plans";
+import { refundQuota, reserveApiCredits } from "@/lib/quota";
 import { hizSiniriAsimi } from "@/lib/rate-limit";
 import { analyzeWinningAd } from "@/lib/openai-analysis";
 import { scoreWinner, variantKey } from "@/lib/winner-score";
-import { LandingPageSummary, fetchPublicPage, summarizeLandingPage } from "@/lib/web-page";
+import { type LandingPageSummary, fetchPublicPage, summarizeLandingPage } from "@/lib/web-page";
 
+const WINNER_ANALYSIS_CREDITS = 5;
 const schema = z.object({ targetMarket: z.string().trim().max(80).optional() });
 
 export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
@@ -15,8 +17,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   if (limited) return limited;
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: "UNAUTHORIZED" }, { status: 401 });
-  const plan = planFromUser(user as never);
-  if (user.role !== "ADMIN" && (!plan?.code || plan.code === "FREE")) return NextResponse.json({ error: "PLAN_REQUIRED" }, { status: 402 });
+  if (!hasPaidPlan(user as never)) return NextResponse.json({ error: "PLAN_REQUIRED" }, { status: 402 });
   const parsed = schema.safeParse(await request.json().catch(() => ({})));
   if (!parsed.success) return NextResponse.json({ error: "INVALID_INPUT" }, { status: 400 });
 
@@ -24,22 +25,30 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
   const ad = await prisma.ad.findUnique({ where: { id }, include: { brandPage: true } });
   if (!ad) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
 
-  const key = variantKey(ad);
-  const siblings = ad.brandPageId && key
-    ? await prisma.ad.findMany({ where: { brandPageId: ad.brandPageId }, select: { brandPageId: true, headline: true, primaryText: true }, take: 500 })
-    : [];
-  const familySize = key ? siblings.filter((sibling) => variantKey(sibling) === key).length : 1;
-  const winner = scoreWinner(ad, familySize);
-
-  // Hedef sayfa açılamazsa analiz yine yapılır; sadece sayfa yorumu boş kalır.
-  let landingPage: LandingPageSummary | null = null;
-  let landingError: string | null = null;
-  if (ad.landingUrl && /^https?:\/\//i.test(ad.landingUrl)) {
-    try { landingPage = summarizeLandingPage(await fetchPublicPage(ad.landingUrl)); }
-    catch (error) { landingError = error instanceof Error ? error.message : "PAGE_FETCH_FAILED"; }
+  const credit = await reserveApiCredits({ user: user as never, amount: WINNER_ANALYSIS_CREDITS });
+  if (!credit.ok) {
+    return NextResponse.json(
+      { error: credit.error, ...("usage" in credit ? { usage: credit.usage } : {}) },
+      { status: credit.status }
+    );
   }
 
   try {
+    const key = variantKey(ad);
+    const siblings = ad.brandPageId && key
+      ? await prisma.ad.findMany({ where: { brandPageId: ad.brandPageId }, select: { brandPageId: true, headline: true, primaryText: true }, take: 500 })
+      : [];
+    const familySize = key ? siblings.filter((sibling) => variantKey(sibling) === key).length : 1;
+    const winner = scoreWinner(ad, familySize);
+
+    // Hedef sayfa açılamazsa analiz yine yapılır; sadece sayfa yorumu boş kalır.
+    let landingPage: LandingPageSummary | null = null;
+    let landingError: string | null = null;
+    if (ad.landingUrl && /^https?:\/\//i.test(ad.landingUrl)) {
+      try { landingPage = summarizeLandingPage(await fetchPublicPage(ad.landingUrl)); }
+      catch (error) { landingError = error instanceof Error ? error.message : "PAGE_FETCH_FAILED"; }
+    }
+
     const result = await analyzeWinningAd({
       brand: ad.brandPage?.name || null,
       headline: ad.headline,
@@ -61,6 +70,7 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     await prisma.aiAnalysis.create({ data: { userId: user.id, query: `winner:${ad.id}`, provider: "openai", model, summary: analysis.verdict, insights: analysis as never } });
     return NextResponse.json({ data: { winner, analysis, landingPage: landingPage && { ...landingPage, excerpt: undefined }, landingError } });
   } catch (error) {
+    if (credit.reserved > 0) await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: credit.reserved });
     const code = error instanceof Error && /^(OPENAI_[A-Z0-9_]+)$/.test(error.message) ? error.message : "AI_ANALYSIS_FAILED";
     return NextResponse.json({ error: code }, { status: code === "OPENAI_NOT_CONFIGURED" ? 503 : 502 });
   }
