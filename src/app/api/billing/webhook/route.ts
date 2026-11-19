@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import Stripe from "stripe";
-import { PaymentStatus, SubscriptionStatus } from "@prisma/client";
+import type Stripe from "stripe";
+import { PaymentStatus, PlanCode, SubscriptionStatus } from "@prisma/client";
 import { prisma } from "@/lib/db";
 import { stripeClient } from "@/lib/stripe";
 
@@ -12,19 +12,68 @@ function status(value: Stripe.Subscription.Status): SubscriptionStatus {
   return SubscriptionStatus.EXPIRED;
 }
 
-async function syncSubscription(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata.userId;
-  const planCode = subscription.metadata.planCode as "BASIC" | "STANDARD" | "PREMIUM" | undefined;
-  if (!userId || !planCode) return;
-  const plan = await prisma.plan.findUnique({ where: { code: planCode } });
-  if (!plan) return;
-  const item = subscription.items.data[0];
-  const start = item?.current_period_start ? new Date(item.current_period_start * 1000) : null;
-  const end = item?.current_period_end ? new Date(item.current_period_end * 1000) : null;
+function isEntitledStripeStatus(value: Stripe.Subscription.Status) {
+  return value === "active" || value === "trialing";
+}
+
+async function syncSubscription(subscription: Stripe.Subscription, forceCanceled = false) {
+  const effectiveStatus: Stripe.Subscription.Status = forceCanceled ? "canceled" : subscription.status;
+  // Incomplete checkouts have not been paid yet; never grant a paid plan or clobber active state.
+  if (effectiveStatus === "incomplete") return;
+
+  let userId = subscription.metadata?.userId;
+  if (!userId) {
+    const existing = await prisma.subscription.findFirst({
+      where: { providerSubscriptionId: subscription.id },
+      select: { userId: true }
+    });
+    userId = existing?.userId;
+  }
+  if (!userId) return;
+
+  const mappedStatus = status(effectiveStatus);
+  const item = subscription.items?.data?.[0];
+  const startUnix = item?.current_period_start ?? (subscription as unknown as { current_period_start?: number }).current_period_start;
+  const endUnix = item?.current_period_end ?? (subscription as unknown as { current_period_end?: number }).current_period_end;
+  const start = startUnix ? new Date(startUnix * 1000) : null;
+  const end = endUnix ? new Date(endUnix * 1000) : null;
+  const baseFields = {
+    status: mappedStatus,
+    billingInterval: subscription.metadata?.billingInterval || "monthly",
+    currentPeriodStart: start,
+    currentPeriodEnd: end,
+    cancelAtPeriodEnd: subscription.cancel_at_period_end,
+    provider: "STRIPE",
+    providerCustomerId: String(subscription.customer),
+    providerSubscriptionId: subscription.id
+  };
+
+  if (isEntitledStripeStatus(effectiveStatus)) {
+    const planCode = subscription.metadata?.planCode as "BASIC" | "STANDARD" | "PREMIUM" | undefined;
+    if (!planCode || !["BASIC", "STANDARD", "PREMIUM"].includes(planCode)) return;
+    const plan = await prisma.plan.findUnique({ where: { code: planCode } });
+    if (!plan) return;
+    await prisma.subscription.upsert({
+      where: { userId },
+      create: { userId, planId: plan.id, ...baseFields },
+      update: { planId: plan.id, ...baseFields }
+    });
+    return;
+  }
+
+  const freePlan = await prisma.plan.findUnique({ where: { code: PlanCode.FREE } });
+  if (!freePlan) {
+    await prisma.subscription.updateMany({
+      where: { userId },
+      data: baseFields
+    });
+    return;
+  }
+
   await prisma.subscription.upsert({
     where: { userId },
-    create: { userId, planId: plan.id, status: status(subscription.status), billingInterval: subscription.metadata.billingInterval || "monthly", currentPeriodStart: start, currentPeriodEnd: end, cancelAtPeriodEnd: subscription.cancel_at_period_end, provider: "STRIPE", providerCustomerId: String(subscription.customer), providerSubscriptionId: subscription.id },
-    update: { planId: plan.id, status: status(subscription.status), billingInterval: subscription.metadata.billingInterval || "monthly", currentPeriodStart: start, currentPeriodEnd: end, cancelAtPeriodEnd: subscription.cancel_at_period_end, provider: "STRIPE", providerCustomerId: String(subscription.customer), providerSubscriptionId: subscription.id }
+    create: { userId, planId: freePlan.id, ...baseFields },
+    update: { planId: freePlan.id, ...baseFields }
   });
 }
 
@@ -37,18 +86,60 @@ export async function POST(request: Request) {
   try { event = stripeClient().webhooks.constructEvent(raw, signature, secret, 300); }
   catch { return NextResponse.json({ error: "INVALID_SIGNATURE" }, { status: 400 }); }
 
-  if (event.type === "checkout.session.completed") {
-    const session = event.data.object;
+  if (event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    const userId = session.metadata?.userId || session.client_reference_id;
+    if (userId) {
+      const isPaid = session.payment_status === "paid";
+      const amountCents = session.amount_total || 0;
+      const currency = (session.currency || "eur").toUpperCase();
+      const description = `Stripe ${session.metadata?.planCode || "subscription"}`;
+      await prisma.payment.upsert({
+        where: { externalId: session.id },
+        create: {
+          userId,
+          amountCents,
+          currency,
+          status: isPaid ? PaymentStatus.PAID : PaymentStatus.PENDING,
+          provider: "STRIPE",
+          externalId: session.id,
+          description,
+          paidAt: isPaid ? new Date() : null
+        },
+        update: isPaid
+          ? { status: PaymentStatus.PAID, amountCents, currency, paidAt: new Date() }
+          : { amountCents, currency }
+      });
+      if (isPaid && typeof session.subscription === "string") {
+        await syncSubscription(await stripeClient().subscriptions.retrieve(session.subscription));
+      }
+    }
+  }
+  if (event.type === "checkout.session.async_payment_failed") {
+    const session = event.data.object as Stripe.Checkout.Session;
     const userId = session.metadata?.userId || session.client_reference_id;
     if (userId) {
       await prisma.payment.upsert({
         where: { externalId: session.id },
-        create: { userId, amountCents: session.amount_total || 0, currency: (session.currency || "eur").toUpperCase(), status: PaymentStatus.PAID, provider: "STRIPE", externalId: session.id, description: `Stripe ${session.metadata?.planCode || "subscription"}`, paidAt: new Date() },
-        update: { status: PaymentStatus.PAID, amountCents: session.amount_total || 0, currency: (session.currency || "eur").toUpperCase(), paidAt: new Date() }
+        create: {
+          userId,
+          amountCents: session.amount_total || 0,
+          currency: (session.currency || "eur").toUpperCase(),
+          status: PaymentStatus.FAILED,
+          provider: "STRIPE",
+          externalId: session.id,
+          description: `Stripe ${session.metadata?.planCode || "subscription"}`
+        },
+        update: { status: PaymentStatus.FAILED }
       });
-      if (typeof session.subscription === "string") await syncSubscription(await stripeClient().subscriptions.retrieve(session.subscription));
     }
   }
-  if (event.type === "customer.subscription.updated" || event.type === "customer.subscription.deleted" || event.type === "customer.subscription.created") await syncSubscription(event.data.object);
+  if (
+    event.type === "customer.subscription.updated" ||
+    event.type === "customer.subscription.deleted" ||
+    event.type === "customer.subscription.created"
+  ) {
+    await syncSubscription(event.data.object as Stripe.Subscription, event.type === "customer.subscription.deleted");
+  }
   return NextResponse.json({ received: true });
 }

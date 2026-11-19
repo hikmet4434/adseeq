@@ -9,6 +9,7 @@ type ContactResult = { brandPageId: string; website: string | null; emails: stri
 
 const ERRORS: Record<string, string> = {
   PLAN_REQUIRED: "E-posta bulma ücretli planlarda açık.",
+  API_CREDITS_EXCEEDED: "Aylık API kredi limitine ulaşıldı.",
   RATE_LIMITED: "Çok fazla istek gönderildi, biraz bekleyin."
 };
 
@@ -73,7 +74,7 @@ export function StoppedAdvertisersClient({ q, country, countries, rows: initialR
     } catch (caught) {
       const code = caught instanceof Error ? caught.message : "CONTACT_SEARCH_FAILED";
       setError(ERRORS[code] || `İletişim bilgisi aranamadı: ${code}`);
-      return code !== "PLAN_REQUIRED" && code !== "RATE_LIMITED";
+      return code !== "PLAN_REQUIRED" && code !== "API_CREDITS_EXCEEDED" && code !== "RATE_LIMITED";
     } finally {
       setSearching((current) => { const next = new Set(current); next.delete(brandPageId); return next; });
     }

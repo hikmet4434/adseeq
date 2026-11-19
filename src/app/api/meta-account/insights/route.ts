@@ -5,7 +5,10 @@ import { currentUser } from "@/lib/auth/current-user";
 import { hizSiniriAsimi } from "@/lib/rate-limit";
 import { META_DATE_PRESETS, classifyAccountAds, fetchAccountInsights, normalizeAdAccountId } from "@/lib/meta-account";
 import { analyzeAccountAds } from "@/lib/openai-analysis";
+import { refundQuota, reserveApiCredits } from "@/lib/quota";
 import { rankWinners } from "@/lib/winner-score";
+
+const META_AI_CREDITS = 5;
 
 // Erişim anahtarı yalnızca bu istekte kullanılır; veritabanına ya da loglara yazılmaz.
 const schema = z.object({
@@ -26,10 +29,23 @@ export async function POST(request: Request) {
   const adAccountId = normalizeAdAccountId(parsed.data.adAccountId);
   if (!adAccountId) return NextResponse.json({ error: "INVALID_AD_ACCOUNT" }, { status: 400 });
 
+  let reservedCredits = 0;
+  if (parsed.data.withAi) {
+    const credit = await reserveApiCredits({ user: user as never, amount: META_AI_CREDITS });
+    if (!credit.ok) {
+      return NextResponse.json(
+        { error: credit.error, ...("usage" in credit ? { usage: credit.usage } : {}) },
+        { status: credit.status }
+      );
+    }
+    reservedCredits = credit.reserved;
+  }
+
   let ads;
   try {
     ads = classifyAccountAds(await fetchAccountInsights(adAccountId, parsed.data.accessToken, parsed.data.datePreset));
   } catch (error) {
+    if (reservedCredits > 0) await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: reservedCredits });
     const code = error instanceof Error && /^META_[A-Z0-9_]+$/.test(error.message) ? error.message : "META_REQUEST_FAILED";
     return NextResponse.json({ error: code }, { status: code === "META_TOKEN_INVALID" || code === "META_PERMISSION_DENIED" ? 401 : 502 });
   }
@@ -59,8 +75,11 @@ export async function POST(request: Request) {
       ai = analysis;
       await prisma.aiAnalysis.create({ data: { userId: user.id, query: `meta-account:${adAccountId}`, provider: "openai", model, summary: analysis.summary, insights: analysis.insights } });
     } catch (error) {
+      if (reservedCredits > 0) await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: reservedCredits });
       aiError = error instanceof Error && /^(OPENAI_[A-Z0-9_]+)$/.test(error.message) ? error.message : "AI_ANALYSIS_FAILED";
     }
+  } else if (reservedCredits > 0) {
+    await refundQuota({ userId: user.id, metric: "api_credits_monthly", amount: reservedCredits });
   }
 
   return NextResponse.json({ data: { adAccountId, ads, ai, aiError } });

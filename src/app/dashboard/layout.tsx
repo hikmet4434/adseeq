@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { requireUser } from "@/lib/auth/current-user";
+import { planFromUser } from "@/lib/plans";
 import { DashboardLayoutClient } from "./dashboard-layout-client";
 import { BrandLogo } from "@/components/brand-logo";
 import type { Metadata } from "next";
@@ -27,9 +28,10 @@ const nav: [string, string][] = [
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const user = await requireUser();
+  const effectivePlan = planFromUser(user as never);
   return (
     <div className="min-h-screen bg-slate-50">
-      <DashboardLayoutClient user={user} nav={nav}>
+      <DashboardLayoutClient user={user} nav={nav} planName={effectivePlan.name}>
         {children}
       </DashboardLayoutClient>
     </div>

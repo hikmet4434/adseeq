@@ -1,6 +1,6 @@
 import { UsagePeriod } from "@prisma/client";
 import { prisma } from "@/lib/db";
-import { getFeatureLimit } from "@/lib/plans";
+import { getFeatureLimit, planAllowsFullAds, planFromUser, type UserSubscriptionLike } from "@/lib/plans";
 
 function dayKey(date = new Date()) {
   return date.toISOString().slice(0, 10);
@@ -143,4 +143,31 @@ export async function refundQuota(params: { userId: string; metric: string; amou
     where: { id: counter.id },
     data: { used: Math.max(0, counter.used - amount) }
   });
+}
+
+/**
+ * Checks paid plan eligibility and atomically reserves monthly API credits for non-admin users.
+ */
+export async function reserveApiCredits(params: {
+  user: { id: string; role?: string | null; subscription?: UserSubscriptionLike | null };
+  amount: number;
+}) {
+  const plan = planFromUser(params.user);
+  const isAdmin = params.user.role === "ADMIN";
+  if (!isAdmin && !planAllowsFullAds(plan.code)) {
+    return { ok: false as const, error: "PLAN_REQUIRED" as const, status: 402 as const };
+  }
+  if (isAdmin || params.amount <= 0) {
+    return { ok: true as const, reserved: 0 };
+  }
+  const usage = await checkAndConsumeQuota({
+    userId: params.user.id,
+    plan,
+    metric: "api_credits_monthly",
+    amount: params.amount
+  });
+  if (!usage.allowed) {
+    return { ok: false as const, error: "API_CREDITS_EXCEEDED" as const, status: 403 as const, usage };
+  }
+  return { ok: true as const, reserved: params.amount };
 }

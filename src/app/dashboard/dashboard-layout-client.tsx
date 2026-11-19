@@ -4,9 +4,10 @@ import { DashboardMobileNav } from "@/components/dashboard-mobile-nav";
 import { BrandLogo } from "@/components/brand-logo";
 import { useT } from "@/lib/i18n";
 
-export function DashboardLayoutClient({ user, nav, children }: { 
+export function DashboardLayoutClient({ user, nav, planName, children }: { 
   user: any; 
   nav: [string, string][];
+  planName?: string;
   children: React.ReactNode;
 }) {
   const t = useT();
@@ -28,7 +29,7 @@ export function DashboardLayoutClient({ user, nav, children }: {
             {user.role !== "ADMIN" && <Link href="/pricing" className="hidden rounded-xl bg-violet-700 px-4 py-2 text-sm font-bold text-white sm:block">{t("nav.upgrade")}</Link>}
             <div className="text-right text-sm">
               <div className="font-bold">{user.name || user.email}</div>
-              <div className="text-xs text-slate-500">{user.subscription?.plan.name}</div>
+              <div className="text-xs text-slate-500">{planName ?? user.subscription?.plan.name}</div>
             </div>
           </div>
         </div>
